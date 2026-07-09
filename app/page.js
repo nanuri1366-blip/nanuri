@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { supabase } from './supabaseClient';
 import { 
   Leaf, 
   Sparkles, 
@@ -121,27 +122,38 @@ export default function Home() {
   useEffect(() => {
     setIsMounted(true);
     
-    // Load Inventory from localStorage
-    const savedInv = localStorage.getItem('yuzu_inventory');
-    if (savedInv) {
-      try {
-        const parsed = JSON.parse(savedInv);
-        if (parsed.classic !== undefined || parsed.deundeun === undefined) {
-          const freshInv = { deundeun: 50, silsok: 30, mini: 15, natgae: 100 };
-          setInventory(freshInv);
-          localStorage.setItem('yuzu_inventory', JSON.stringify(freshInv));
+    // Load Inventory from Supabase (fallback to localStorage)
+    const loadInventory = async () => {
+      const dbInv = await supabase.getInventory();
+      if (dbInv && dbInv.deundeun !== undefined) {
+        setInventory(dbInv);
+        localStorage.setItem('yuzu_inventory', JSON.stringify(dbInv));
+      } else {
+        const savedInv = localStorage.getItem('yuzu_inventory');
+        if (savedInv) {
+          try {
+            const parsed = JSON.parse(savedInv);
+            if (parsed.classic !== undefined || parsed.deundeun === undefined) {
+              const freshInv = { deundeun: 50, silsok: 30, mini: 15, natgae: 100 };
+              setInventory(freshInv);
+              localStorage.setItem('yuzu_inventory', JSON.stringify(freshInv));
+            } else {
+              setInventory(parsed);
+            }
+          } catch (e) {
+            console.error("Failed to parse inventory", e);
+            const freshInv = { deundeun: 50, silsok: 30, mini: 15, natgae: 100 };
+            setInventory(freshInv);
+            localStorage.setItem('yuzu_inventory', JSON.stringify(freshInv));
+          }
         } else {
-          setInventory(parsed);
+          const defaultInv = { deundeun: 50, silsok: 30, mini: 15, natgae: 100 };
+          setInventory(defaultInv);
+          localStorage.setItem('yuzu_inventory', JSON.stringify(defaultInv));
         }
-      } catch (e) {
-        console.error("Failed to parse inventory", e);
-        const freshInv = { deundeun: 50, silsok: 30, mini: 15, natgae: 100 };
-        setInventory(freshInv);
-        localStorage.setItem('yuzu_inventory', JSON.stringify(freshInv));
       }
-    } else {
-      localStorage.setItem('yuzu_inventory', JSON.stringify({ deundeun: 50, silsok: 30, mini: 15, natgae: 100 }));
-    }
+    };
+    loadInventory();
 
     // Scroll listener for header shadow
     const handleScroll = () => {
@@ -193,7 +205,12 @@ export default function Home() {
       status: "대기"
     };
 
-    // Save to localStorage
+    // Save to Supabase & localStorage (fallback/cache)
+    const saveOrderData = async () => {
+      await supabase.addOrder(newOrder);
+    };
+    saveOrderData();
+
     const savedOrders = localStorage.getItem('yuzu_orders');
     let ordersList = [];
     if (savedOrders) {

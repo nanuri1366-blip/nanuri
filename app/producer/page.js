@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { 
   Settings, 
   Home as HomeIcon, 
@@ -96,9 +97,25 @@ export default function ProducerDashboard() {
       setIsAuthenticated(true);
     }
 
-    // Load Local Storage Datas
-    loadInventoryFromStorage();
-    loadMaterialsStockFromStorage();
+    // Load from Supabase (fallback to Local Storage)
+    const loadAllDbData = async () => {
+      const dbInv = await supabase.getInventory();
+      if (dbInv) setInventory(dbInv);
+      else loadInventoryFromStorage();
+
+      const dbMaterials = await supabase.getMaterialsStock();
+      if (dbMaterials) {
+        setMaterialsStock(dbMaterials);
+        const adjs = {};
+        Object.keys(dbMaterials).forEach(k => {
+          adjs[k] = materialUnits[k] === 'g' ? 500 : 1;
+        });
+        setAdjustMatAmounts(adjs);
+      } else {
+        loadMaterialsStockFromStorage();
+      }
+    };
+    loadAllDbData();
   }, []);
 
   const loadInventoryFromStorage = () => {
@@ -169,6 +186,7 @@ export default function ProducerDashboard() {
     nextStock[name] = Math.round(nextStock[name] * 1000) / 1000;
     setMaterialsStock(nextStock);
     localStorage.setItem('yuzu_materials_stock', JSON.stringify(nextStock));
+    supabase.updateMaterialStock(name, nextStock[name]);
   };
 
   // 2) 완제품 생산 등록 (레시피 비례 원자재 차감)
@@ -216,7 +234,7 @@ export default function ProducerDashboard() {
     recipe.forEach(mat => {
       if (mat.name in nextStock) {
         nextStock[mat.name] -= (mat.qty * amount);
-        nextStock[mat.name] = Math.round(nextStock[name] * 1000) / 1000;
+        nextStock[mat.name] = Math.round(nextStock[mat.name] * 1000) / 1000;
       }
     });
 
@@ -229,6 +247,8 @@ export default function ProducerDashboard() {
     setInventory(nextInv);
     localStorage.setItem('yuzu_materials_stock', JSON.stringify(nextStock));
     localStorage.setItem('yuzu_inventory', JSON.stringify(nextInv));
+    supabase.updateAllMaterialsStock(nextStock);
+    supabase.updateInventory(produceSelect, nextInv[produceSelect]);
 
     const selectedText = {
       classic: "유자 클래식 오란다",
@@ -258,6 +278,7 @@ export default function ProducerDashboard() {
     nextInv[outboundSelect] -= amount;
     setInventory(nextInv);
     localStorage.setItem('yuzu_inventory', JSON.stringify(nextInv));
+    supabase.updateInventory(outboundSelect, nextInv[outboundSelect]);
 
     const selectedText = {
       classic: "유자 클래식 오란다",

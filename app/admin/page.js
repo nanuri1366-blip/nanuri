@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { 
   Lock, 
   ShoppingCart, 
@@ -126,10 +127,29 @@ export default function AdminDashboard() {
       localStorage.setItem('yuzu_db_version', CURRENT_DB_VERSION);
     }
 
-    // Load Local Storage Datas
-    loadOrdersFromStorage();
-    loadInventoryFromStorage();
-    loadMaterialsStockFromStorage();
+    // Load from Supabase (fallback to Local Storage)
+    const loadAllDbData = async () => {
+      const dbOrders = await supabase.getOrders();
+      if (dbOrders) setOrders(dbOrders);
+      else loadOrdersFromStorage();
+
+      const dbInv = await supabase.getInventory();
+      if (dbInv) setInventory(dbInv);
+      else loadInventoryFromStorage();
+
+      const dbMaterials = await supabase.getMaterialsStock();
+      if (dbMaterials) {
+        setMaterialsStock(dbMaterials);
+        const initialAdjs = {};
+        Object.keys(dbMaterials).forEach(k => {
+          initialAdjs[k] = materialUnits[k] === 'g' ? 500 : 1;
+        });
+        setAdjustMatAmounts(initialAdjs);
+      } else {
+        loadMaterialsStockFromStorage();
+      }
+    };
+    loadAllDbData();
   }, []);
 
   // Load calculator recipe materials when calcProduct changes
@@ -181,7 +201,18 @@ export default function AdminDashboard() {
     }
   };
 
-  const loadCalcMaterials = (productId) => {
+  const loadCalcMaterials = async (productId) => {
+    const dbRecipe = await supabase.getRecipe(productId);
+    if (dbRecipe) {
+      setCalcMaterials(dbRecipe);
+      
+      const defaultPrices = { classic: 12000, nutty: 14000, gift: 22000 };
+      if (!userEditedSalePrice) {
+        setCalcSalePrice(defaultPrices[productId]);
+      }
+      return;
+    }
+
     const key = `yuzu_materials_${productId}`;
     const data = localStorage.getItem(key);
     let materials = null;
@@ -201,6 +232,7 @@ export default function AdminDashboard() {
     if (!materials) {
       localStorage.setItem(key, JSON.stringify(defaultMaterialsData[productId]));
       materials = defaultMaterialsData[productId];
+      supabase.updateRecipe(productId, defaultMaterialsData[productId]);
     }
     setCalcMaterials(materials);
     
@@ -232,6 +264,7 @@ export default function AdminDashboard() {
     });
     setOrders(updated);
     localStorage.setItem('yuzu_orders', JSON.stringify(updated));
+    supabase.saveAllOrders(updated);
   };
 
   // 2) Delete Order
@@ -240,6 +273,7 @@ export default function AdminDashboard() {
       const filtered = orders.filter(o => o.id !== orderId);
       setOrders(filtered);
       localStorage.setItem('yuzu_orders', JSON.stringify(filtered));
+      supabase.deleteOrder(orderId);
     }
   };
 
@@ -296,6 +330,7 @@ export default function AdminDashboard() {
       // Save materials
       setMaterialsStock(nextMaterials);
       localStorage.setItem('yuzu_materials_stock', JSON.stringify(nextMaterials));
+      supabase.updateAllMaterialsStock(nextMaterials);
 
       nextInv[productId] += amount;
     } else if (action === 'sub') {
@@ -308,6 +343,7 @@ export default function AdminDashboard() {
 
     setInventory(nextInv);
     localStorage.setItem('yuzu_inventory', JSON.stringify(nextInv));
+    supabase.updateInventory(productId, nextInv[productId]);
   };
 
   // 4) Adjust Raw Material Stock
@@ -334,6 +370,7 @@ export default function AdminDashboard() {
     nextStock[name] = Math.round(nextStock[name] * 1000) / 1000;
     setMaterialsStock(nextStock);
     localStorage.setItem('yuzu_materials_stock', JSON.stringify(nextStock));
+    supabase.updateMaterialStock(name, nextStock[name]);
   };
 
   // 5) Delete Material from Recipe Calculator
@@ -341,6 +378,7 @@ export default function AdminDashboard() {
     const filtered = calcMaterials.filter(m => m.id !== matId);
     setCalcMaterials(filtered);
     localStorage.setItem(`yuzu_materials_${calcProduct}`, JSON.stringify(filtered));
+    supabase.updateRecipe(calcProduct, filtered);
   };
 
   // 6) Add New Material to Recipe
@@ -365,6 +403,7 @@ export default function AdminDashboard() {
 
     setCalcMaterials(updated);
     localStorage.setItem(`yuzu_materials_${calcProduct}`, JSON.stringify(updated));
+    supabase.updateRecipe(calcProduct, updated);
     setShowAddMatModal(false);
 
     setNewMatName('');
