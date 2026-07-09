@@ -97,27 +97,7 @@ export default function Home() {
   const [inventory, setInventory] = useState({ deundeun: 50, silsok: 30, mini: 15, natgae: 100 });
   const [isMounted, setIsMounted] = useState(false);
 
-  // 3. Form Input State
-  const [userName, setUserName] = useState('');
-  const [userPhone, setUserPhone] = useState('');
-  const [productSelect, setProductSelect] = useState('');
-  const [optionSelect, setOptionSelect] = useState('');
-  const [productQty, setProductQty] = useState(1);
-  const [userMessage, setUserMessage] = useState('');
-
-  // 4. Form Validation Error State
-  const [errors, setErrors] = useState({
-    name: false,
-    phone: false,
-    product: false,
-    option: false,
-    qty: false
-  });
-
-  // 5. Success Modal State
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [confirmedPhone, setConfirmedPhone] = useState('');
-  const [targetStoreUrl, setTargetStoreUrl] = useState('');
+  // (Form input, validation, and modal states removed since order form is deleted)
 
   useEffect(() => {
     setIsMounted(true);
@@ -167,87 +147,7 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Form Submit Handler
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // Reset errors
-    const nextErrors = {
-      name: !userName.trim(),
-      phone: !userPhone.trim() || !/^\d{2,3}-\d{3,4}-\d{4}$/.test(userPhone.trim()),
-      product: !productSelect,
-      option: !optionSelect,
-      qty: isNaN(productQty) || productQty < 1 || productQty > 100
-    };
-
-    setErrors(nextErrors);
-
-    // If any error exists, stop submission
-    if (Object.values(nextErrors).some(err => err)) {
-      return;
-    }
-
-    const selectedProduct = PRODUCTS[productSelect];
-    const selectedOption = selectedProduct.options.find(o => o.key === optionSelect);
-    const itemPrice = selectedOption ? selectedOption.price : selectedProduct.price;
-    const totalPrice = itemPrice * parseInt(productQty, 10);
-
-    // Prepare Order Object
-    const newOrder = {
-      id: 'YUZU-' + Date.now(),
-      orderTime: new Date().toLocaleString(),
-      customerName: userName.trim(),
-      phone: userPhone.trim(),
-      product: selectedProduct.name,
-      option: selectedOption ? selectedOption.name : '',
-      qty: parseInt(productQty, 10),
-      price: totalPrice,
-      status: "대기"
-    };
-
-    // Save to Supabase & localStorage (fallback/cache)
-    const saveOrderData = async () => {
-      await supabase.addOrder(newOrder);
-    };
-    saveOrderData();
-
-    const savedOrders = localStorage.getItem('yuzu_orders');
-    let ordersList = [];
-    if (savedOrders) {
-      try {
-        ordersList = JSON.parse(savedOrders);
-      } catch (err) {
-        console.error("Failed parsing orders list", err);
-      }
-    }
-    ordersList.unshift(newOrder); // Add to beginning
-    localStorage.setItem('yuzu_orders', JSON.stringify(ordersList));
-
-    // Show Success Modal & Store Link
-    setConfirmedPhone(userPhone.trim());
-    setTargetStoreUrl(selectedProduct.url);
-    setShowSuccessModal(true);
-
-    // Clear Inputs
-    setUserName('');
-    setUserPhone('');
-    setProductSelect('');
-    setOptionSelect('');
-    setProductQty(1);
-    setUserMessage('');
-  };
-
-  // Product Selection handler from Cards
-  const handleSelectProduct = (productKey) => {
-    if (inventory[productKey] <= 0) return;
-    setProductSelect(productKey);
-    setOptionSelect(''); // Reset option selection
-    // Smooth scroll to order section
-    const orderSection = document.getElementById('order');
-    if (orderSection) {
-      orderSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  // (Form submit and product selection smooth-scroll handlers removed since order form is deleted)
 
   return (
     <>
@@ -263,7 +163,7 @@ export default function Home() {
             <a href="#features" className="nav-link" onClick={() => setIsMenuOpen(false)}>특장점</a>
             <a href="#lineup" className="nav-link" onClick={() => setIsMenuOpen(false)}>제품 소개</a>
             <a href="#reviews" className="nav-link" onClick={() => setIsMenuOpen(false)}>고객 후기</a>
-            <a href="#order" className="nav-btn" onClick={() => setIsMenuOpen(false)}>지금 주문하기</a>
+            <a href="https://smartstore.naver.com/kkaburioranda/products/12823083471" target="_blank" rel="noopener noreferrer" className="nav-btn" onClick={() => setIsMenuOpen(false)}>지금 주문하기</a>
           </nav>
           <button 
             className="mobile-menu-toggle" 
@@ -291,7 +191,7 @@ export default function Home() {
               끈적임 없고 바삭한 프리미엄 수제 오란다&까부리입니다.
             </p>
             <div className="hero-ctas">
-              <a href="#order" className="btn btn-primary">간편 주문하기 <ArrowRight size={18} /></a>
+              <a href="https://smartstore.naver.com/kkaburioranda/products/12823083471" target="_blank" rel="noopener noreferrer" className="btn btn-primary">스마트스토어로 구매하기 <ArrowRight size={18} /></a>
               <a href="#story" className="btn btn-outline">스토리 읽어보기</a>
             </div>
           </div>
@@ -408,44 +308,52 @@ export default function Home() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
-                      <a 
-                        href={product.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="product-action-btn"
-                        style={{ 
-                          backgroundColor: 'var(--accent-green)', 
-                          color: 'var(--white)', 
-                          border: 'none',
-                          borderRadius: 'var(--radius-sm)',
-                          textDecoration: 'none',
-                          padding: '12px 0',
-                          textAlign: 'center',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '14px',
-                          fontWeight: '700'
-                        }}
-                      >
-                        스마트스토어로 구매
-                      </a>
-                      <button 
-                        onClick={() => handleSelectProduct(key)} 
-                        className="product-action-btn"
-                        disabled={!hasStock}
-                        style={{
-                          backgroundColor: 'var(--bg-warm-cream)',
-                          color: 'var(--text-dark)',
-                          border: '1px solid rgba(180, 160, 120, 0.3)',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '10px 0',
-                          fontSize: '13px',
-                          fontWeight: '500'
-                        }}
-                      >
-                        {!hasStock ? '품절 (Sold Out)' : '간편 문의 선택'}
-                      </button>
+                      {hasStock ? (
+                        <a 
+                          href={product.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="product-buy-btn"
+                          style={{
+                            backgroundColor: 'var(--accent-green)',
+                            color: 'white',
+                            borderRadius: 'var(--radius-sm)',
+                            textDecoration: 'none',
+                            padding: '12px 0',
+                            textAlign: 'center',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: '700',
+                            width: '100%'
+                          }}
+                        >
+                          스마트스토어로 구매
+                        </a>
+                      ) : (
+                        <button 
+                          disabled
+                          className="product-buy-btn"
+                          style={{
+                            backgroundColor: 'var(--bg-warm-cream)',
+                            color: 'rgba(60, 50, 40, 0.4)',
+                            border: '1px solid rgba(180, 160, 120, 0.2)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '12px 0',
+                            textAlign: 'center',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: '700',
+                            width: '100%',
+                            cursor: 'not-allowed'
+                          }}
+                        >
+                          품절 (Sold Out)
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -504,152 +412,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Order/Inquiry Section */}
-      <section className="order-section" id="order">
-        <div className="container">
-          <div className="order-box-grid">
-            <div className="order-info-side">
-              <span className="order-tag">EASY ORDER</span>
-              <h2>오늘 주문하면<br /><span className="highlight">내일 발송</span>됩니다.</h2>
-              <p>모든 오란다는 신선도와 최상의 식감을 지키기 위해 매일 아침 당일 생산한 수량만큼만 포장하여 발송합니다.</p>
-              <div className="order-info-list">
-                <div className="info-item">
-                  <Truck size={24} />
-                  <div>
-                    <h5>전국 택배 배송</h5>
-                    <p>5만원 이상 구매 시 무료배송 (기본 배송비 3,000원)</p>
-                  </div>
-                </div>
-                <div className="info-item">
-                  <Clock size={24} />
-                  <div>
-                    <h5>당일 아침 생산 원칙</h5>
-                    <p>오전 10시 이전 주문 시 당일 생산하여 즉시 출고</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="order-form-side">
-              <h3>간편 주문 신청서</h3>
-              <p className="form-intro">주문 정보를 입력해 주시면 확인 후 즉시 안내 문자를 드립니다.</p>
-              
-              <form onSubmit={handleSubmit} novalidate>
-                <div className={`form-group ${errors.name ? 'has-error' : ''}`}>
-                  <label htmlFor="userName">주문자 성함 <span className="required">*</span></label>
-                  <div className="input-wrapper">
-                    <User size={18} className="input-icon" />
-                    <input 
-                      type="text" 
-                      id="userName" 
-                      placeholder="성함을 입력하세요" 
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                    />
-                  </div>
-                  <span className="error-msg" id="nameError">성함을 입력해주세요.</span>
-                </div>
-                
-                <div className={`form-group ${errors.phone ? 'has-error' : ''}`}>
-                  <label htmlFor="userPhone">연락처 <span className="required">*</span></label>
-                  <div className="input-wrapper">
-                    <Phone size={18} className="input-icon" />
-                    <input 
-                      type="tel" 
-                      id="userPhone" 
-                      placeholder="예: 010-1234-5678" 
-                      value={userPhone}
-                      onChange={(e) => setUserPhone(e.target.value)}
-                    />
-                  </div>
-                  <span className="error-msg" id="phoneError">올바른 연락처 형식을 입력해주세요 (예: 010-1234-5678).</span>
-                </div>
-                
-                <div className={`form-group ${errors.product ? 'has-error' : ''}`}>
-                  <label htmlFor="productSelect">상품 선택 <span className="required">*</span></label>
-                  <div className="input-wrapper">
-                    <Package size={18} className="input-icon" />
-                    <select 
-                      id="productSelect" 
-                      value={productSelect}
-                      onChange={(e) => {
-                        setProductSelect(e.target.value);
-                        setOptionSelect(''); // Reset option on product change
-                      }}
-                    >
-                      <option value="" disabled>구매하실 상품을 선택해 주세요</option>
-                      {Object.entries(PRODUCTS).map(([key, product]) => {
-                        const hasStock = isMounted && inventory[key] > 0;
-                        return (
-                          <option key={key} value={key} disabled={!hasStock}>
-                            {product.name} ({product.price.toLocaleString()}원) {!hasStock ? ' [품절]' : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                  <span className="error-msg" id="productError">상품을 선택해주세요.</span>
-                </div>
-
-                {productSelect && (
-                  <div className={`form-group ${errors.option ? 'has-error' : ''}`} style={{ marginTop: '16px' }}>
-                    <label htmlFor="optionSelect">상세 옵션 (상품 구성) <span className="required">*</span></label>
-                    <div className="input-wrapper">
-                      <Package size={18} className="input-icon" />
-                      <select 
-                        id="optionSelect" 
-                        value={optionSelect}
-                        onChange={(e) => setOptionSelect(e.target.value)}
-                      >
-                        <option value="" disabled>상세 상품 옵션을 선택해 주세요</option>
-                        {PRODUCTS[productSelect].options.map(opt => (
-                          <option key={opt.key} value={opt.key}>
-                            {opt.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <span className="error-msg" id="optionError">상세 옵션을 선택해주세요.</span>
-                  </div>
-                )}
-
-                <div className="form-row">
-                  <div className={`form-group flex-1 ${errors.qty ? 'has-error' : ''}`}>
-                    <label htmlFor="productQty">수량 <span className="required">*</span></label>
-                    <div className="input-wrapper">
-                      <Hash size={18} className="input-icon" />
-                      <input 
-                        type="number" 
-                        id="productQty" 
-                        min="1" 
-                        max="100" 
-                        value={productQty}
-                        onChange={(e) => setProductQty(parseInt(e.target.value, 10) || '')}
-                      />
-                    </div>
-                    <span className="error-msg" id="qtyError">1개 이상 100개 이하로 입력해주세요.</span>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="userMessage">배송 요청사항 / 문의</label>
-                  <textarea 
-                    id="userMessage" 
-                    placeholder="배송 메시지 또는 문의사항을 입력하세요 (예: 문 앞에 놓아주세요)"
-                    value={userMessage}
-                    onChange={(e) => setUserMessage(e.target.value)}
-                  ></textarea>
-                </div>
-
-                <button type="submit" className="submit-btn" id="submitBtn">
-                  <span>스마트스토어로 주문하기</span>
-                  <Check size={18} />
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="footer">
         <div className="container footer-container">
@@ -672,56 +434,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
-      {/* Success Modal */}
-      <div className={`modal-backdrop ${showSuccessModal ? 'active' : ''}`} id="successModal">
-        <div className="modal-card" style={{ maxWidth: '500px' }}>
-          <div className="modal-icon" style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}><PartyPopper size={32} /></div>
-          <h3>임시 주문 접수 완료!</h3>
-          <p style={{ margin: '16px 0', lineHeight: '1.6', fontSize: '15px' }}>
-            입력하신 연락처(<span>{confirmedPhone}</span>)로 임시 신청 정보가 등록되었습니다.<br/>
-            <strong>최종 결제 및 주문 완료</strong>를 위해 아래 버튼을 클릭하여 네이버 스마트스토어 공식 구매 페이지로 이동해 주세요!
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '24px' }}>
-            <a 
-              href={targetStoreUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="modal-close-btn"
-              style={{
-                backgroundColor: 'var(--accent-green)',
-                color: 'white',
-                textDecoration: 'none',
-                textAlign: 'center',
-                padding: '14px 0',
-                display: 'block',
-                width: '100%',
-                fontWeight: 'bold',
-                borderRadius: 'var(--radius-sm)'
-              }}
-              onClick={() => setShowSuccessModal(false)}
-            >
-              스마트스토어로 이동하여 결제 완료하기
-            </a>
-            <button 
-              className="modal-close-btn" 
-              id="modalCloseBtn"
-              style={{
-                backgroundColor: 'transparent',
-                color: 'var(--text-dark)',
-                border: '1px solid rgba(180, 160, 120, 0.4)',
-                padding: '12px 0',
-                fontWeight: '500',
-                width: '100%',
-                borderRadius: 'var(--radius-sm)'
-              }}
-              onClick={() => setShowSuccessModal(false)}
-            >
-              확인 (스토어 이동 없이 닫기)
-            </button>
-          </div>
-        </div>
-      </div>
     </>
   );
 }
