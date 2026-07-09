@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유자품은 오란다&까부리 | 관리자 대시보드</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+    <!-- Admin Authentication Gate -->
+    <div id="authGate" class="auth-gate-backdrop">
+        <div class="auth-gate-card">
+            <div class="auth-gate-icon"><i data-lucide="lock"></i></div>
+            <h2>관리자 비밀번호 확인</h2>
+            <p>보안을 위해 관리자 비밀번호를 입력해 주세요.</p>
+            <div class="form-group" style="margin-top: 16px; margin-bottom: 0; width: 100%;">
+                <input type="password" id="gatePassword" placeholder="비밀번호 입력" style="width: 100%; padding: 12px 16px; border: 1px solid rgba(180, 160, 120, 0.3); border-radius: 6px; outline: none; text-align: center; font-size: 16px;">
+                <span class="error-msg" id="gatePasswordError" style="margin-top: 8px; color: #E74C3C; font-size: 12px; display: none;">비밀번호가 올바르지 않습니다.</span>
+            </div>
+            <div style="margin-top: 24px; width: 100%;">
+                <button class="btn btn-primary" id="gateSubmitBtn" style="width: 100%; padding: 12px; font-size: 15px; background-color: var(--accent-green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700;">로그인</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-en">Yuzu Admin</span>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="#" class="sidebar-link active" data-tab="orders">
+                    <i data-lucide="shopping-cart"></i>
+                    <span>주문 현황</span>
+                </a>
+                <a href="#" class="sidebar-link" data-tab="inventory">
+                    <i data-lucide="box"></i>
+                    <span>재고 관리</span>
+                </a>
+                <a href="#" class="sidebar-link" data-tab="calculator">
+                    <i data-lucide="calculator"></i>
+                    <span>단가 계산기</span>
+                </a>
+                <div class="sidebar-divider"></div>
+                <a href="index.html" class="sidebar-link exit-link">
+                    <i data-lucide="log-out"></i>
+                    <span>메인 홈으로</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-title">
+                    <h1 id="tabTitle">주문 현황 관리</h1>
+                    <p id="tabDesc">고객들이 신청한 가상 주문 내역을 실시간으로 확인하고 접수 처리합니다.</p>
+                </div>
+                <div class="admin-profile">
+                    <div class="profile-info">
+                        <span class="profile-name">최고 관리자</span>
+                        <span class="profile-role">마스터 계정</span>
+                    </div>
+                    <div class="profile-avatar">Y</div>
+                </div>
+            </header>
+
+            <!-- 1. Orders Tab Content -->
+            <div class="tab-content active" id="ordersTab">
+                <!-- Scorecards -->
+                <div class="scorecards-grid">
+                    <div class="scorecard yellow">
+                        <div class="scorecard-info">
+                            <span class="scorecard-label">총 주문 건수</span>
+                            <h3 class="scorecard-value" id="totalOrdersCount">0</h3>
+                        </div>
+                        <div class="scorecard-icon"><i data-lucide="bar-chart-2"></i></div>
+                    </div>
+                    <div class="scorecard green">
+                        <div class="scorecard-info">
+                            <span class="scorecard-label">처리 대기중</span>
+                            <h3 class="scorecard-value" id="pendingOrdersCount">0</h3>
+                        </div>
+                        <div class="scorecard-icon"><i data-lucide="clock"></i></div>
+                    </div>
+                    <div class="scorecard dark">
+                        <div class="scorecard-info">
+                            <span class="scorecard-label">처리 완료</span>
+                            <h3 class="scorecard-value" id="completedOrdersCount">0</h3>
+                        </div>
+                        <div class="scorecard-icon"><i data-lucide="check-circle-2"></i></div>
+                    </div>
+                </div>
+
+                <!-- Orders Table Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3>주문 내역 목록</h3>
+                        <button class="btn-refresh" id="refreshOrdersBtn">
+                            <i data-lucide="rotate-cw"></i> <span>새로고침</span>
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="ordersTable">
+                            <thead>
+                                <tr>
+                                    <th>주문일시</th>
+                                    <th>주문자</th>
+                                    <th>연락처</th>
+                                    <th>상품명</th>
+                                    <th>수량</th>
+                                    <th>총 예정금액</th>
+                                    <th>요청사항</th>
+                                    <th>상태</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <!-- Dynamic Content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Inventory Tab Content -->
+            <div class="tab-content" id="inventoryTab">
+                <!-- Inventory Grid -->
+                <div class="inventory-grid">
+                    <!-- Product Stock Cards -->
+                    <div class="inventory-card" data-product-id="classic">
+                        <div class="inv-card-header">
+                            <span class="product-badge">BEST</span>
+                            <h3>유자 클래식 오란다</h3>
+                        </div>
+                        <div class="inv-status">
+                            <div class="inv-qty-box">
+                                <span class="label">현재 재고</span>
+                                <span class="qty-value" id="stock-classic">0</span><span class="unit">개</span>
+                            </div>
+                            <div class="progress-bar-wrapper">
+                                <div class="progress-bar" id="progress-classic" style="width: 0%"></div>
+                            </div>
+                            <span class="stock-status-text" id="status-classic">정상</span>
+                        </div>
+                        <div class="inv-actions">
+                            <input type="number" id="adjust-classic" value="10" min="1" max="1000">
+                            <button class="btn btn-adjust-plus" data-target="classic" data-action="add">입고 (+)</button>
+                            <button class="btn btn-adjust-minus" data-target="classic" data-action="sub">출고 (-)</button>
+                        </div>
+                    </div>
+
+                    <div class="inventory-card" data-product-id="nutty">
+                        <div class="inv-card-header">
+                            <h3>유자 견과 오란다</h3>
+                        </div>
+                        <div class="inv-status">
+                            <div class="inv-qty-box">
+                                <span class="label">현재 재고</span>
+                                <span class="qty-value" id="stock-nutty">0</span><span class="unit">개</span>
+                            </div>
+                            <div class="progress-bar-wrapper">
+                                <div class="progress-bar" id="progress-nutty" style="width: 0%"></div>
+                            </div>
+                            <span class="stock-status-text" id="status-nutty">정상</span>
+                        </div>
+                        <div class="inv-actions">
+                            <input type="number" id="adjust-nutty" value="10" min="1" max="1000">
+                            <button class="btn btn-adjust-plus" data-target="nutty" data-action="add">입고 (+)</button>
+                            <button class="btn btn-adjust-minus" data-target="nutty" data-action="sub">출고 (-)</button>
+                        </div>
+                    </div>
+
+                    <div class="inventory-card" data-product-id="gift">
+                        <div class="inv-card-header">
+                            <span class="product-badge accent">GIFT</span>
+                            <h3>프리미엄 유자 선물세트</h3>
+                        </div>
+                        <div class="inv-status">
+                            <div class="inv-qty-box">
+                                <span class="label">현재 재고</span>
+                                <span class="qty-value" id="stock-gift">0</span><span class="unit">개</span>
+                            </div>
+                            <div class="progress-bar-wrapper">
+                                <div class="progress-bar" id="progress-gift" style="width: 0%"></div>
+                            </div>
+                            <span class="stock-status-text" id="status-gift">정상</span>
+                        </div>
+                        <div class="inv-actions">
+                            <input type="number" id="adjust-gift" value="5" min="1" max="1000">
+                            <button class="btn btn-adjust-plus" data-target="gift" data-action="add">입고 (+)</button>
+                            <button class="btn btn-adjust-minus" data-target="gift" data-action="sub">출고 (-)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Raw Materials Stock Card -->
+                <div class="dashboard-card" style="margin-top: 40px;">
+                    <div class="card-header">
+                        <h3>원재료 재고 현황</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="materialsStockTable">
+                            <thead>
+                                <tr>
+                                    <th>원재료명</th>
+                                    <th>현재 재고량</th>
+                                    <th>단위</th>
+                                    <th>수량 조절</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="materialsStockTableBody">
+                                <!-- Dynamic Content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Calculator Tab Content -->
+            <div class="tab-content" id="calculatorTab">
+                <div class="calculator-layout">
+                    <!-- Left Column: Raw Material Input -->
+                    <div class="dashboard-card calc-input-card">
+                        <div class="card-header">
+                            <h3>원재료 비용 등록</h3>
+                            <button class="btn-primary" id="addMaterialBtn" style="border-radius: var(--radius-sm); padding: 8px 16px; font-size: 13px;">
+                                <i data-lucide="plus"></i> <span>재료 추가</span>
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table calc-table">
+                                <thead>
+                                    <tr>
+                                        <th>원재료명</th>
+                                        <th>단위당 단가</th>
+                                        <th>1회 소요량</th>
+                                        <th>총 소요원가</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="materialTableBody">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Summary & Calculator -->
+                    <div class="calc-sidebar">
+                        <!-- Summary Card -->
+                        <div class="dashboard-card calc-summary-card">
+                            <h3>원가 및 마진 분석</h3>
+                            
+                            <div class="form-group select-calc-product">
+                                <label for="calcProductSelect">대상 상품 선택</label>
+                                <select id="calcProductSelect">
+                                    <option value="classic">유자 클래식 오란다 (1박스)</option>
+                                    <option value="nutty">유자 견과 오란다 (1박스)</option>
+                                    <option value="gift">프리미엄 유자 선물세트 (1박스)</option>
+                                </select>
+                            </div>
+
+                            <div class="summary-scorecard-list">
+                                <div class="summary-item">
+                                    <span class="label">총 제조원가</span>
+                                    <span class="value" id="calcTotalCost">0원</span>
+                                </div>
+                                <div class="summary-item form-input-item">
+                                    <span class="label">설정 판매가</span>
+                                    <div class="input-wrapper">
+                                        <input type="number" id="calcSalePrice" value="12000" min="0" step="500">
+                                        <span class="unit">원</span>
+                                    </div>
+                                </div>
+                                <div class="summary-divider"></div>
+                                <div class="summary-item highlight-margin">
+                                    <span class="label">예상 순이익 (마진액)</span>
+                                    <span class="value text-green" id="calcMarginProfit">0원</span>
+                                </div>
+                                <div class="summary-item highlight-margin-rate">
+                                    <span class="label">예상 마진율</span>
+                                    <span class="value text-orange" id="calcMarginRate">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Target Margin Simulator -->
+                        <div class="dashboard-card calc-simulator-card">
+                            <h3>목표 마진율 판매가 계산기</h3>
+                            <p class="sim-desc">원하는 마진율을 달성하기 위한 적정 판매가를 자동으로 제안합니다.</p>
+                            
+                            <div class="form-group">
+                                <label for="targetMarginRate">목표 마진율 입력</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="targetMarginRate" value="40" min="1" max="99">
+                                    <span class="unit">%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="sim-result-box">
+                                <span class="result-label">제안 권장 판매가</span>
+                                <h4 class="result-value" id="recommendedSalePrice">0원</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Material Add Modal -->
+    <div class="modal-backdrop" id="materialModal">
+        <div class="modal-card">
+            <h3>새 원재료 등록</h3>
+            <div class="form-group" style="margin-top: 16px; text-align: left;">
+                <label for="newMatName">원재료명</label>
+                <input type="text" id="newMatName" placeholder="예: 국산 유자청, 쌀과자 알갱이" style="width: 100%; padding: 10px; border: 1px solid rgba(180, 160, 120, 0.3); border-radius: var(--radius-sm); outline: none;">
+            </div>
+            <div class="form-group" style="margin-top: 12px; text-align: left;">
+                <label for="newMatUnitPrice">단위당 가격 (원)</label>
+                <input type="number" id="newMatUnitPrice" placeholder="단위당 가격 입력" style="width: 100%; padding: 10px; border: 1px solid rgba(180, 160, 120, 0.3); border-radius: var(--radius-sm); outline: none;">
+            </div>
+            <div class="form-group" style="margin-top: 12px; text-align: left;">
+                <label for="newMatQty">소요량 (개 / g / ml 등)</label>
+                <input type="number" id="newMatQty" placeholder="소요량 입력" style="width: 100%; padding: 10px; border: 1px solid rgba(180, 160, 120, 0.3); border-radius: var(--radius-sm); outline: none;">
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: center;">
+                <button class="btn btn-outline" id="matCancelBtn" style="padding: 10px 20px; font-size: 14px; border-radius: var(--radius-sm);">취소</button>
+                <button class="btn btn-primary" id="matSubmitBtn" style="padding: 10px 20px; font-size: 14px; background-color: var(--accent-green); color: white; border-radius: var(--radius-sm);">추가하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유자품은 오란다&까부리 | 생산 관리 대시보드</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="admin.css"> <!-- Re-use base admin grid tokens -->
+    <link rel="stylesheet" href="producer.css"> <!-- Custom high-contrast layout -->
+</head>
+<body class="admin-body">
+
+    <!-- Producer Authentication Gate -->
+    <div id="authGate" class="auth-gate-backdrop">
+        <div class="auth-gate-card">
+            <div class="auth-gate-icon" style="background-color: rgba(255, 170, 0, 0.1); color: var(--accent-orange, #FFAA00);"><i data-lucide="settings"></i></div>
+            <h2>생산자 비밀번호 확인</h2>
+            <p>보안을 위해 생산 시설 비밀번호를 입력해 주세요.</p>
+            <div class="form-group" style="margin-top: 16px; margin-bottom: 0; width: 100%;">
+                <input type="password" id="gatePassword" placeholder="비밀번호 입력" style="width: 100%; padding: 12px 16px; border: 1px solid rgba(180, 160, 120, 0.3); border-radius: 6px; outline: none; text-align: center; font-size: 16px;">
+                <span class="error-msg" id="gatePasswordError" style="margin-top: 8px; color: #E74C3C; font-size: 12px; display: none;">비밀번호가 올바르지 않습니다.</span>
+            </div>
+            <div style="margin-top: 24px; width: 100%;">
+                <button class="btn btn-primary" id="gateSubmitBtn" style="width: 100%; padding: 12px; font-size: 15px; background-color: var(--accent-orange, #FFAA00); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700;">로그인</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-header">
+        <div class="header-left">
+            <div class="admin-logo">
+                <span class="logo-badge" style="background-color: var(--accent-orange, #FFAA00);">MAKER</span>
+                <h2>유자품은 오란다&까부리</h2>
+            </div>
+            <span class="header-divider">|</span>
+            <span class="page-title">생산 관리 대시보드</span>
+        </div>
+        <div class="header-right">
+            <a href="index.html" class="btn btn-outline" style="padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="home" style="width: 14px; height: 14px;"></i> 메인 홈으로
+            </a>
+        </div>
+    </div>
+
+    <div class="main-content" style="padding: 30px 24px; max-width: 1300px; margin: 0 auto;">
+        <!-- Top Status Card -->
+        <div class="dashboard-card" style="margin-bottom: 24px; background: linear-gradient(135deg, #FFF9EB 0%, #FFF3D6 100%); border: 1px solid rgba(255, 170, 0, 0.2);">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background: #FFAA00; color: white; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="factory" style="width: 24px; height: 24px;"></i>
+                </div>
+                <div>
+                    <h3 style="color: #6A4B13; margin-bottom: 4px; font-weight: 700;">실시간 수제 생산 지침</h3>
+                    <p style="color: #8C6F3E; font-size: 14px; margin: 0;">원재료가 입고되면 아래 표에 기록해 주세요. 완제품 생산 완료 시 생산 품목과 수량을 등록하면 레시피에 맞춰 원자재 재고가 자동 차감됩니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="producer-grid">
+            <!-- Left Column: Raw Materials Inventory -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i data-lucide="package-open" style="color: #FFAA00;"></i>
+                        <h3>원재료 재고 관리 대장</h3>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>원재료명</th>
+                                <th>현재 재고량</th>
+                                <th>단위</th>
+                                <th>조절 수량</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="producerMaterialsStockTableBody">
+                            <!-- Dynamic rendering -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Column: Finished Goods Production & Outbound -->
+            <div class="producer-right-panel">
+                <!-- 1. Finished Product Production Form -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i data-lucide="chef-hat" style="color: #2D6A4F;"></i>
+                            <h3>완제품 생산 등록</h3>
+                        </div>
+                    </div>
+                    <form id="productionForm" class="producer-form" onsubmit="return false;">
+                        <div class="form-group">
+                            <label for="produceSelect">생산 품목 선택</label>
+                            <select id="produceSelect" required>
+                                <option value="classic">유자 클래식 오란다</option>
+                                <option value="nutty">유자 견과 오란다</option>
+                                <option value="gift">프리미엄 유자 선물세트</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="produceQty">생산 완료 수량 (박스 단위)</label>
+                            <div class="qty-input-wrapper">
+                                <input type="number" id="produceQty" value="10" min="1" max="500" required>
+                                <span class="qty-unit">박스</span>
+                            </div>
+                        </div>
+                        <button type="submit" id="btnRegisterProduction" class="btn btn-produce-submit">
+                            <i data-lucide="plus-circle"></i> 생산 등록 (원재료 소모)
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 2. Finished Product Outbound (Shipment / Waste) Form -->
+                <div class="dashboard-card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i data-lucide="truck" style="color: #C0392B;"></i>
+                            <h3>완제품 출고/폐기 등록</h3>
+                        </div>
+                    </div>
+                    <form id="outboundForm" class="producer-form" onsubmit="return false;">
+                        <div class="form-group">
+                            <label for="outboundSelect">출고/폐기 품목 선택</label>
+                            <select id="outboundSelect" required>
+                                <option value="classic">유자 클래식 오란다</option>
+                                <option value="nutty">유자 견과 오란다</option>
+                                <option value="gift">프리미엄 유자 선물세트</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="outboundQty">출하/출고 수량 (박스 단위)</label>
+                            <div class="qty-input-wrapper">
+                                <input type="number" id="outboundQty" value="5" min="1" max="500" required>
+                                <span class="qty-unit">박스</span>
+                            </div>
+                        </div>
+                        <button type="submit" id="btnRegisterOutbound" class="btn btn-outbound-submit">
+                            <i data-lucide="minus-circle"></i> 출고 등록 (완제품 차감)
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="producer.js"></script>
+</body>
+</html>
