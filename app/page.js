@@ -379,7 +379,7 @@ export default function Home() {
               <p className="review-text">"기존 오란다는 너무 딱딱해서 이가 아팠는데, 이건 정말 바삭하면서도 부드러워요! 상큼한 유자 맛 덕분에 물리지 않고 계속 들어갑니다. 벌써 두 박스째 주문했네요."</p>
               <div className="review-author">
                 <div className="author-info">
-                  <span className="author-name">김민지 님</span>
+                  <span className="author-name">김OO 님</span>
                   <span className="author-tag">구매자 | 유자 클래식 구매</span>
                 </div>
               </div>
@@ -391,7 +391,7 @@ export default function Home() {
               <p className="review-text">"부모님 명절 선물용으로 프리미엄 선물세트 사드렸는데 박스 패키지부터 너무 고급스럽다며 아주 기뻐하셨어요. 너무 달지도 않고 유자 향이 은은하게 나니까 아주 만족스럽습니다."</p>
               <div className="review-author">
                 <div className="author-info">
-                  <span className="author-name">이정호 님</span>
+                  <span className="author-name">이OO 님</span>
                   <span className="author-tag">구매자 | 프리미엄 선물세트 구매</span>
                 </div>
               </div>
@@ -403,7 +403,7 @@ export default function Home() {
               <p className="review-text">"사무실에서 일하면서 하나씩 까먹기 너무 좋아요. 개별 포장이라 위생적이고 끈적이지 않아서 키보드 두드리면서 먹어도 묻지 않는 게 정말 큰 강점입니다. 견과류 든 것도 진짜 고소해요!"</p>
               <div className="review-author">
                 <div className="author-info">
-                  <span className="author-name">박수현 님</span>
+                  <span className="author-name">박OO 님</span>
                   <span className="author-tag">구매자 | 유자 견과 구매</span>
                 </div>
               </div>
