@@ -1,17 +1,4 @@
-import { Outfit, Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
-
-const outfit = Outfit({
-  subsets: ['latin'],
-  weight: ['300', '400', '600', '800', '900'],
-  variable: '--font-outfit',
-});
-
-const notoSansKr = Noto_Sans_KR({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '700', '900'],
-  variable: '--font-noto-sans-kr',
-});
 
 export const metadata = {
   title: '유자품은 오란다&까부리 | 상큼달콤 수제 디저트',
@@ -21,7 +8,15 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ko">
-      <body className={`${outfit.variable} ${notoSansKr.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800;900&display=swap" 
+          rel="stylesheet" 
+        />
+      </head>
+      <body>
         {children}
       </body>
     </html>

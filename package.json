@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node -r ./fix_readlink.js ./node_modules/next/dist/bin/next dev",
+    "build": "node -r ./fix_readlink.js ./node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "next lint"
   },

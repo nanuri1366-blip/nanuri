@@ -24,69 +24,72 @@ import {
   PartyPopper 
 } from 'lucide-react';
 
-const PRODUCTS = {
-  deundeun: {
-    id: "deundeun",
-    name: "[든든세트] 고흥 유자품은 까부리와 오란다",
-    desc: "오란다/까부리 선택식 (18개입). 넉넉하게 채워 온 가족이 함께 먹기 좋은 프리미엄 든든세트.",
-    originalPrice: 30600,
-    price: 27540,
-    unit: "(18개입 / 1박스)",
-    badge: "Best",
-    url: "https://smartstore.naver.com/kkaburioranda/products/12823083471",
-    options: [
-      { key: "classic", name: "오란다 (든든세트) [18개] (+0원)", price: 27540 },
-      { key: "kkaburi", name: "까부리 (든든세트) [18개] (+4,860원)", price: 32400 },
-      { key: "mixed", name: "까부리&오란다 (든든세트) [18개] (+1,620원)", price: 29160 }
-    ]
+const DEFAULT_LANDING_SETTINGS = {
+  popup: {
+    enabled: false,
+    title: "공지사항",
+    content: "유자를 품은 오란다&까부리 홈페이지를 방문해 주셔서 감사합니다. 현재 단체 주문은 스마트스토어 또는 고객센터로 직접 문의 주시면 친절하게 안내해 드리겠습니다.",
+    image: "",
+    link: "https://smartstore.naver.com/kkaburioranda"
   },
-  silsok: {
-    id: "silsok",
-    name: "[실속세트] 고흥 유자품은 까부리와 오란다",
-    desc: "오란다/까부리 선택식 (12개입). 부담 없는 가격과 실속 있는 구성으로 간식용 선물로 가장 추천하는 세트.",
-    originalPrice: 20400,
-    price: 18360,
-    unit: "(12개입 / 1박스)",
-    badge: "추천",
-    url: "https://smartstore.naver.com/kkaburioranda/products/12823080166",
-    options: [
-      { key: "classic", name: "오란다 (실속세트) [12개] (+0원)", price: 18360 },
-      { key: "kkaburi", name: "까부리 (실속세트) [12개] (+3,240원)", price: 21600 },
-      { key: "mixed", name: "까부리&오란다 (실속세트) [12개] (+1,080원)", price: 19440 }
-    ]
+  hero: {
+    badge: "PREMIUM HANDMADE DESSERT",
+    title: "바삭함 속에 피어나는\n싱그러운 유자 향",
+    subtitle: "100% 고흥 유자로 담근 유자청과 쌀엿조청의 황금 비율로 탄생한\n끈적임 없고 바삭한 프리미엄 수제 오란다&까부리입니다.",
+    image: "images/yuzu_oranda_hero.png",
+    ctaText: "스마트스토어로 구매하기",
+    ctaLink: "https://smartstore.naver.com/kkaburioranda/products/12823083471",
+    storyLinkText: "스토리 읽어보기"
   },
-  mini: {
-    id: "mini",
-    name: "[미니세트] 고흥 유자품은 까부리와 오란다",
-    desc: "오란다/까부리 선택식 (6개입). 답례품 및 가벼운 체험용으로 안성맞춤인 미니 구성 세트.",
-    originalPrice: 10200,
-    price: 9180,
-    unit: "(6개입 / 1박스)",
-    badge: "인기",
-    url: "https://smartstore.naver.com/kkaburioranda/products/12823072673",
-    options: [
-      { key: "classic", name: "오란다 (미니세트) [6개] (+0원)", price: 9180 },
-      { key: "kkaburi", name: "까부리 (미니세트) [6개] (+1,620원)", price: 10800 },
-      { key: "mixed", name: "까부리&오란다 (미니세트) [6개] (+810원)", price: 9990 }
-    ]
+  brandStory: {
+    subtitle: "BRAND STORY",
+    title: "자연에서 온 상큼함과\n전통의 만남",
+    sectionTitle: "딱딱하고 끈적이는 오란다는 잊으세요.",
+    body1: "우리는 오란다를 먹을 때 입천장이 아프거나 이가 끈적여 불편했던 기억에서 출발했습니다. 어떻게 하면 남녀노소 누구나 가볍고 맛있게 한과를 즐길 수 있을까 고민했습니다.",
+    body2: "남해안의 따뜻한 햇살을 머금고 자란 100% 국산 유자를 엄선하여 즙을 내고 껍질을 잘게 다져 넣었습니다. 가마솥에 푹 고아낸 쌀조청에 상큼한 유자청을 배합해 한 입 베어 물면 바삭하게 부서지며 향긋한 유자향이 입안 가득 번집니다.",
+    featureBadge: "100% 국산 천연 유자",
+    featureDesc: "인공 향료나 보존료 없이 오직 진짜 유자만을 가득 담았습니다.",
+    image: "images/yuzu_classic_oranda.png"
   },
-  natgae: {
-    id: "natgae",
-    name: "[낱개] 고흥 유자품은 까부리와 오란다",
-    desc: "개별 시식용 오란다 / 까부리 낱개 구성. 가볍게 맛보고 싶을 때 추천하는 싱글 메뉴.",
-    originalPrice: 2200,
-    price: 2000,
-    unit: "(1개입)",
-    badge: "낱개",
-    url: "https://smartstore.naver.com/kkaburioranda/products/12701706707",
-    options: [
-      { key: "classic", name: "오란다 (낱개) [1개] (+0원)", price: 2000 },
-      { key: "kkaburi", name: "까부리 (낱개) [1개] (+300원)", price: 2300 }
-    ]
+  products: {
+    deundeun: {
+      name: "[든든세트] 고흥 유자품은 까부리와 오란다",
+      desc: "오란다/까부리 선택식 (18개입). 넉넉하게 채워 온 가족이 함께 먹기 좋은 프리미엄 든든세트.",
+      originalPrice: 30600,
+      price: 27540,
+      unit: "(18개입 / 1박스)",
+      badge: "Best",
+      url: "https://smartstore.naver.com/kkaburioranda/products/12823083471"
+    },
+    silsok: {
+      name: "[실속세트] 고흥 유자품은 까부리와 오란다",
+      desc: "오란다/까부리 선택식 (12개입). 부담 없는 가격과 실속 있는 구성으로 간식용 선물로 가장 추천하는 세트.",
+      originalPrice: 20400,
+      price: 18360,
+      unit: "(12개입 / 1박스)",
+      badge: "추천",
+      url: "https://smartstore.naver.com/kkaburioranda/products/12823080166"
+    },
+    mini: {
+      name: "[미니세트] 고흥 유자품은 까부리와 오란다",
+      desc: "오란다/까부리 선택식 (6개입). 답례품 및 가벼운 체험용으로 안성맞춤인 미니 구성 세트.",
+      originalPrice: 10200,
+      price: 9180,
+      unit: "(6개입 / 1박스)",
+      badge: "인기",
+      url: "https://smartstore.naver.com/kkaburioranda/products/12823072673"
+    },
+    natgae: {
+      name: "[낱개] 고흥 유자품은 까부리와 오란다",
+      desc: "개별 시식용 오란다 / 까부리 낱개 구성. 가볍게 맛보고 싶을 때 추천하는 싱글 메뉴.",
+      originalPrice: 2200,
+      price: 2000,
+      unit: "(1개입)",
+      badge: "낱개",
+      url: "https://smartstore.naver.com/kkaburioranda/products/12701706707"
+    }
   }
 };
-
-const MAIN_IMAGE = "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000";
 
 export default function Home() {
   // 1. Mobile Menu State
@@ -97,7 +100,9 @@ export default function Home() {
   const [inventory, setInventory] = useState({ deundeun: 50, silsok: 30, mini: 15, natgae: 100 });
   const [isMounted, setIsMounted] = useState(false);
 
-  // (Form input, validation, and modal states removed since order form is deleted)
+  // 3. Dynamic Landing Settings & Popup States
+  const [landingSettings, setLandingSettings] = useState(DEFAULT_LANDING_SETTINGS);
+  const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -135,6 +140,43 @@ export default function Home() {
     };
     loadInventory();
 
+    // Load Landing Settings
+    const loadLanding = async () => {
+      // 1. Try local storage first
+      const localLanding = localStorage.getItem('yuzu_landing_settings');
+      let currentLanding = DEFAULT_LANDING_SETTINGS;
+      if (localLanding) {
+        try {
+          currentLanding = JSON.parse(localLanding);
+          setLandingSettings(currentLanding);
+        } catch(e) {
+          console.error(e);
+        }
+      }
+
+      // 2. Query Supabase
+      const dbLanding = await supabase.getLandingSettings();
+      if (dbLanding) {
+        setLandingSettings(dbLanding);
+        localStorage.setItem('yuzu_landing_settings', JSON.stringify(dbLanding));
+        currentLanding = dbLanding;
+      }
+
+      // 3. Handle notice popup logic
+      if (currentLanding.popup && currentLanding.popup.enabled) {
+        const lastClosed = localStorage.getItem('yuzu_popup_last_closed');
+        if (lastClosed) {
+          const hoursPassed = (Date.now() - Number(lastClosed)) / (1000 * 60 * 60);
+          if (hoursPassed >= 24) {
+            setShowPopup(true);
+          }
+        } else {
+          setShowPopup(true);
+        }
+      }
+    };
+    loadLanding();
+
     // Scroll listener for header shadow
     const handleScroll = () => {
       if (window.scrollY > 50) {
@@ -147,10 +189,148 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // (Form submit and product selection smooth-scroll handlers removed since order form is deleted)
+  const closePopupFor24Hours = () => {
+    localStorage.setItem('yuzu_popup_last_closed', Date.now().toString());
+    setShowPopup(false);
+  };
+
+  const closePopup = () => {
+    setShowPopup(false);
+  };
 
   return (
     <>
+      {/* Notice Popup Modal */}
+      {isMounted && showPopup && landingSettings && landingSettings.popup && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+          padding: '20px',
+          backdropFilter: 'blur(3px)'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+            width: '100%',
+            maxWidth: '380px',
+            overflow: 'hidden',
+            border: '1.5px solid var(--border-color, #EAE8E3)',
+            animation: 'fadeIn 0.3s ease-out'
+          }}>
+            {/* Title / Header */}
+            <div style={{
+              backgroundColor: 'var(--primary-yuzu, #FFC72C)',
+              color: 'var(--text-dark, #2B2A27)',
+              padding: '20px',
+              textAlign: 'center',
+              position: 'relative'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>
+                {landingSettings.popup.title || "공지사항"}
+              </h3>
+            </div>
+
+            {/* Optional Image */}
+            {landingSettings.popup.image && (
+              <div style={{ width: '100%', height: '180px', overflow: 'hidden' }}>
+                <img 
+                  src={landingSettings.popup.image} 
+                  alt="공지 이미지" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              </div>
+            )}
+
+            {/* Content Area */}
+            <div style={{ padding: '24px', textAlign: 'center' }}>
+              <p style={{
+                fontSize: '14px',
+                color: 'var(--text-dark, #2B2A27)',
+                lineHeight: '1.6',
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+                fontWeight: '500'
+              }}>
+                {landingSettings.popup.content}
+              </p>
+              
+              {landingSettings.popup.link && (
+                <a 
+                  href={landingSettings.popup.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{
+                    display: 'inline-flex',
+                    marginTop: '20px',
+                    width: '100%',
+                    justifyContent: 'center',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    textDecoration: 'none',
+                    backgroundColor: 'var(--accent-green, #2D6A4F)',
+                    color: 'white'
+                  }}
+                >
+                  자세히 보기 <ArrowRight size={16} style={{ marginLeft: '6px' }} />
+                </a>
+              )}
+            </div>
+
+            {/* Actions Bar */}
+            <div style={{
+              display: 'flex',
+              borderTop: '1.5px solid var(--border-color, #EAE8E3)',
+              backgroundColor: '#FAF9F6'
+            }}>
+              <button 
+                onClick={closePopupFor24Hours}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: 'var(--text-muted, #6B6862)',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  outline: 'none'
+                }}
+              >
+                오늘 하루 보지 않기
+              </button>
+              <button 
+                onClick={closePopup}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  color: 'var(--text-dark, #2B2A27)',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  borderLeft: '1.5px solid var(--border-color, #EAE8E3)',
+                  outline: 'none'
+                }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navigation Bar */}
       <header className={`main-header ${isScrolled ? 'scrolled' : ''}`}>
         <div className="container header-container">
@@ -163,7 +343,7 @@ export default function Home() {
             <a href="#features" className="nav-link" onClick={() => setIsMenuOpen(false)}>특장점</a>
             <a href="#lineup" className="nav-link" onClick={() => setIsMenuOpen(false)}>제품 소개</a>
             <a href="#reviews" className="nav-link" onClick={() => setIsMenuOpen(false)}>고객 후기</a>
-            <a href="https://smartstore.naver.com/kkaburioranda/products/12823083471" target="_blank" rel="noopener noreferrer" className="nav-btn" onClick={() => setIsMenuOpen(false)}>지금 주문하기</a>
+            <a href={landingSettings.hero.ctaLink} target="_blank" rel="noopener noreferrer" className="nav-btn" onClick={() => setIsMenuOpen(false)}>{landingSettings.hero.ctaText}</a>
           </nav>
           <button 
             className="mobile-menu-toggle" 
@@ -181,23 +361,21 @@ export default function Home() {
         <div className="hero-bg-overlay"></div>
         <div className="container hero-container">
           <div className="hero-content">
-            <span className="hero-badge">PREMIUM HANDMADE DESSERT</span>
-            <h1 className="hero-title">
-              바삭함 속에 피어나는<br />
-              <span className="highlight">싱그러운 유자 향</span>
+            <span className="hero-badge">{landingSettings.hero.badge}</span>
+            <h1 className="hero-title" style={{ whiteSpace: 'pre-wrap' }}>
+              {landingSettings.hero.title}
             </h1>
-            <p className="hero-subtitle">
-              100% 고흥 유자로 담근 유자청과 쌀엿조청의 황금 비율로 탄생한<br />
-              끈적임 없고 바삭한 프리미엄 수제 오란다&까부리입니다.
+            <p className="hero-subtitle" style={{ whiteSpace: 'pre-wrap' }}>
+              {landingSettings.hero.subtitle}
             </p>
             <div className="hero-ctas">
-              <a href="https://smartstore.naver.com/kkaburioranda/products/12823083471" target="_blank" rel="noopener noreferrer" className="btn btn-primary">스마트스토어로 구매하기 <ArrowRight size={18} /></a>
-              <a href="#story" className="btn btn-outline">스토리 읽어보기</a>
+              <a href={landingSettings.hero.ctaLink} target="_blank" rel="noopener noreferrer" className="btn btn-primary">{landingSettings.hero.ctaText} <ArrowRight size={18} /></a>
+              <a href="#story" className="btn btn-outline">{landingSettings.hero.storyLinkText || "스토리 읽어보기"}</a>
             </div>
           </div>
           <div className="hero-image-wrapper">
             <div className="hero-image-card">
-              <img src="images/yuzu_oranda_hero.png" alt="유자품은 오란다&까부리 메인 비주얼" className="hero-image" />
+              <img src={landingSettings.hero.image} alt="유자품은 오란다&까부리 메인 비주얼" className="hero-image" />
             </div>
           </div>
         </div>
@@ -207,27 +385,21 @@ export default function Home() {
       <section className="story-section" id="story">
         <div className="container">
           <div className="section-header text-center">
-            <span className="section-subtitle">BRAND STORY</span>
-            <h2 className="section-title">자연에서 온 상큼함과<br />전통의 만남</h2>
+            <span className="section-subtitle">{landingSettings.brandStory.subtitle}</span>
+            <h2 className="section-title" style={{ whiteSpace: 'pre-wrap' }}>{landingSettings.brandStory.title}</h2>
             <div className="title-underline"></div>
           </div>
           <div className="story-grid">
             <div className="story-text">
-              <h3>딱딱하고 끈적이는 오란다는 잊으세요.</h3>
-              <p>
-                우리는 오란다를 먹을 때 입천장이 아프거나 이가 끈적여 불편했던 기억에서 출발했습니다. 
-                어떻게 하면 남녀노소 누구나 가볍고 맛있게 한과를 즐길 수 있을까 고민했습니다.
-              </p>
-              <p>
-                남해안의 따뜻한 햇살을 머금고 자란 <strong>100% 국산 유자</strong>를 엄선하여 즙을 내고 껍질을 잘게 다져 넣었습니다. 
-                가마솥에 푹 고아낸 쌀조청에 상큼한 유자청을 배합해 한 입 베어 물면 바삭하게 부서지며 향긋한 유자향이 입안 가득 번집니다.
-              </p>
+              <h3>{landingSettings.brandStory.sectionTitle}</h3>
+              <p style={{ whiteSpace: 'pre-wrap' }}>{landingSettings.brandStory.body1}</p>
+              <p style={{ whiteSpace: 'pre-wrap' }}>{landingSettings.brandStory.body2}</p>
               <div className="story-features">
                 <div className="story-feature-item">
                   <div className="icon-box"><Leaf size={22} /></div>
                   <div>
-                    <h4>100% 국산 천연 유자</h4>
-                    <p>인공 향료나 보존료 없이 오직 진짜 유자만을 가득 담았습니다.</p>
+                    <h4>{landingSettings.brandStory.featureBadge}</h4>
+                    <p>{landingSettings.brandStory.featureDesc}</p>
                   </div>
                 </div>
               </div>
@@ -235,7 +407,7 @@ export default function Home() {
             <div className="story-visual">
               <div className="visual-card">
                 <div className="visual-deco-circle"></div>
-                <img src="images/yuzu_classic_oranda.png" alt="유자 클래식 오란다 제조 과정" className="story-img" />
+                <img src={landingSettings.brandStory.image} alt="유자 클래식 오란다 제조 과정" className="story-img" />
               </div>
             </div>
           </div>
@@ -279,13 +451,20 @@ export default function Home() {
             <div className="title-underline"></div>
           </div>
           <div className="lineup-grid">
-            {Object.entries(PRODUCTS).map(([key, product]) => {
+            {Object.entries(landingSettings.products).map(([key, product]) => {
               const hasStock = isMounted && inventory[key] > 0;
+              const originalPrice = product.originalPrice || 0;
+              const price = product.price || 0;
+              const discount = originalPrice > price ? Math.round((originalPrice - price) / originalPrice * 100) : 0;
               return (
                 <div key={key} className={`product-card ${!hasStock ? 'sold-out' : ''}`}>
                   {product.badge && <div className={`product-badge ${product.badge === 'Gift' || product.badge === '인기' ? 'accent' : ''}`}>{product.badge}</div>}
                   <div className="product-img-wrapper">
-                    <img src={MAIN_IMAGE} alt={product.name} className="product-img" />
+                    <img 
+                      src="https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000" 
+                      alt={product.name} 
+                      className="product-img" 
+                    />
                   </div>
                   <div className="product-info">
                     <h3 className="product-name" style={{ fontSize: '17px', minHeight: '52px', lineHeight: '1.4' }}>{product.name}</h3>
@@ -293,16 +472,18 @@ export default function Home() {
                     
                     {/* Price with Original Price and Discount */}
                     <div className="product-price" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)', fontSize: '13px' }}>
-                          {product.originalPrice.toLocaleString()}원
-                        </span>
-                        <span style={{ backgroundColor: 'var(--primary-yuzu-light)', color: 'var(--text-dark)', padding: '1px 5px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
-                          -{Math.round((product.originalPrice - product.price) / product.originalPrice * 100)}%
-                        </span>
-                      </div>
+                      {discount > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)', fontSize: '13px' }}>
+                            {originalPrice.toLocaleString()}원
+                          </span>
+                          <span style={{ backgroundColor: 'var(--primary-yuzu-light)', color: 'var(--text-dark)', padding: '1px 5px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
+                            -{discount}%
+                          </span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '2px' }}>
-                        <span className="price" style={{ fontSize: '20px' }}>{product.price.toLocaleString()}원</span>
+                        <span className="price" style={{ fontSize: '20px' }}>{price.toLocaleString()}원</span>
                         <span className="unit">{product.unit}</span>
                       </div>
                     </div>
