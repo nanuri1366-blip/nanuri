@@ -59,6 +59,7 @@ const DEFAULT_LANDING_SETTINGS = {
       price: 27540,
       unit: "(18개입 / 1박스)",
       badge: "Best",
+      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000",
       url: "https://smartstore.naver.com/kkaburioranda/products/12823083471"
     },
     silsok: {
@@ -68,6 +69,7 @@ const DEFAULT_LANDING_SETTINGS = {
       price: 18360,
       unit: "(12개입 / 1박스)",
       badge: "추천",
+      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000",
       url: "https://smartstore.naver.com/kkaburioranda/products/12823080166"
     },
     mini: {
@@ -77,6 +79,7 @@ const DEFAULT_LANDING_SETTINGS = {
       price: 9180,
       unit: "(6개입 / 1박스)",
       badge: "인기",
+      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000",
       url: "https://smartstore.naver.com/kkaburioranda/products/12823072673"
     },
     natgae: {
@@ -86,6 +89,7 @@ const DEFAULT_LANDING_SETTINGS = {
       price: 2000,
       unit: "(1개입)",
       badge: "낱개",
+      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000",
       url: "https://smartstore.naver.com/kkaburioranda/products/12701706707"
     }
   }
@@ -147,7 +151,20 @@ export default function Home() {
       let currentLanding = DEFAULT_LANDING_SETTINGS;
       if (localLanding) {
         try {
-          currentLanding = JSON.parse(localLanding);
+          const parsed = JSON.parse(localLanding);
+          currentLanding = {
+            ...DEFAULT_LANDING_SETTINGS,
+            ...parsed,
+            popup: { ...DEFAULT_LANDING_SETTINGS.popup, ...(parsed.popup || {}) },
+            hero: { ...DEFAULT_LANDING_SETTINGS.hero, ...(parsed.hero || {}) },
+            brandStory: { ...DEFAULT_LANDING_SETTINGS.brandStory, ...(parsed.brandStory || {}) },
+            products: {
+              deundeun: { ...DEFAULT_LANDING_SETTINGS.products.deundeun, ...(parsed.products?.deundeun || {}) },
+              silsok: { ...DEFAULT_LANDING_SETTINGS.products.silsok, ...(parsed.products?.silsok || {}) },
+              mini: { ...DEFAULT_LANDING_SETTINGS.products.mini, ...(parsed.products?.mini || {}) },
+              natgae: { ...DEFAULT_LANDING_SETTINGS.products.natgae, ...(parsed.products?.natgae || {}) }
+            }
+          };
           setLandingSettings(currentLanding);
         } catch(e) {
           console.error(e);
@@ -157,9 +174,21 @@ export default function Home() {
       // 2. Query Supabase
       const dbLanding = await supabase.getLandingSettings();
       if (dbLanding) {
-        setLandingSettings(dbLanding);
-        localStorage.setItem('yuzu_landing_settings', JSON.stringify(dbLanding));
-        currentLanding = dbLanding;
+        currentLanding = {
+          ...DEFAULT_LANDING_SETTINGS,
+          ...dbLanding,
+          popup: { ...DEFAULT_LANDING_SETTINGS.popup, ...(dbLanding.popup || {}) },
+          hero: { ...DEFAULT_LANDING_SETTINGS.hero, ...(dbLanding.hero || {}) },
+          brandStory: { ...DEFAULT_LANDING_SETTINGS.brandStory, ...(dbLanding.brandStory || {}) },
+          products: {
+            deundeun: { ...DEFAULT_LANDING_SETTINGS.products.deundeun, ...(dbLanding.products?.deundeun || {}) },
+            silsok: { ...DEFAULT_LANDING_SETTINGS.products.silsok, ...(dbLanding.products?.silsok || {}) },
+            mini: { ...DEFAULT_LANDING_SETTINGS.products.mini, ...(dbLanding.products?.mini || {}) },
+            natgae: { ...DEFAULT_LANDING_SETTINGS.products.natgae, ...(dbLanding.products?.natgae || {}) }
+          }
+        };
+        setLandingSettings(currentLanding);
+        localStorage.setItem('yuzu_landing_settings', JSON.stringify(currentLanding));
       }
 
       // 3. Handle notice popup logic
@@ -461,7 +490,7 @@ export default function Home() {
                   {product.badge && <div className={`product-badge ${product.badge === 'Gift' || product.badge === '인기' ? 'accent' : ''}`}>{product.badge}</div>}
                   <div className="product-img-wrapper">
                     <img 
-                      src="https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000" 
+                      src={product.image || "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"} 
                       alt={product.name} 
                       className="product-img" 
                     />

@@ -58,8 +58,101 @@ const defaultLandingSettings = {
     featureBadge: "100% 국산 천연 유자",
     featureDesc: "인공 향료나 보존료 없이 오직 진짜 유자만을 가득 담았습니다.",
     image: "images/yuzu_classic_oranda.png"
+  },
+  products: {
+    deundeun: {
+      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
+    },
+    silsok: {
+      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
+    },
+    mini: {
+      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
+    },
+    natgae: {
+      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
+    }
   }
 };
+
+// Image Field Editor with URL input and File Upload preview
+function ImageFieldEditor({ label, value, onChange, placeholder = "이미지 URL 또는 PC 파일 업로드" }) {
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 3 * 1024 * 1024) {
+        alert('이미지 파일 용량은 3MB 이내로 권장합니다.');
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        onChange(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+      <label style={{ fontSize: '13px', fontWeight: '700', color: '#2B2A27' }}>{label}</label>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{
+          width: '74px',
+          height: '74px',
+          borderRadius: '8px',
+          border: '1.5px solid #EAE8E3',
+          backgroundColor: '#FAF9F6',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          {value ? (
+            <img src={value} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ fontSize: '11px', color: '#A09E9B', textAlign: 'center' }}>미등록</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexGrow: 1 }}>
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+          />
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: '#FAF6EE',
+              border: '1px solid #EAE8E3',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: '#2B2A27',
+              cursor: 'pointer'
+            }}>
+              <span>📁 PC 사진 업로드</span>
+              <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+            </label>
+            {value && (
+              <button
+                type="button"
+                onClick={() => onChange('')}
+                style={{ background: 'none', border: 'none', fontSize: '12px', color: '#C0392B', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                초기화
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
   // 1. Auth State
@@ -117,7 +210,19 @@ export default function AdminDashboard() {
       setProducts(prodList || []);
       setRawMaterials(matsList || []);
       setInventoryLogs(logsList || []);
-      if (land) setLandingSettings(land);
+      if (land) {
+        setLandingSettings({
+          ...defaultLandingSettings,
+          ...land,
+          popup: { ...defaultLandingSettings.popup, ...(land.popup || {}) },
+          hero: { ...defaultLandingSettings.hero, ...(land.hero || {}) },
+          brandStory: { ...defaultLandingSettings.brandStory, ...(land.brandStory || {}) },
+          products: {
+            ...defaultLandingSettings.products,
+            ...(land.products || {})
+          }
+        });
+      }
 
       if (goodsList && goodsList.length > 0 && !calcSelectedGoodId) {
         setCalcSelectedGoodId(goodsList[0].id);
@@ -183,6 +288,7 @@ export default function AdminDashboard() {
   // --------------------------------------------------------------------------
   const handleOpenAddOrder = () => {
     const firstGood = finishedGoods[0];
+    const initialPrice = firstGood?.price || 20000;
     setOrderModal({
       isOpen: true,
       isEdit: false,
@@ -191,7 +297,9 @@ export default function AdminDashboard() {
         phone: '',
         product_id: firstGood?.id || '',
         product_name: firstGood?.name || '',
+        unit_price: initialPrice,
         quantity: 1,
+        total_price: initialPrice,
         status: '주문 접수',
         memo: ''
       }
@@ -199,10 +307,19 @@ export default function AdminDashboard() {
   };
 
   const handleOpenEditOrder = (ord) => {
+    const good = finishedGoods.find(g => g.name === ord.product_name || g.id === ord.product_id);
+    const unitPrice = ord.unit_price !== undefined ? ord.unit_price : (good ? good.price : 20000);
+    const qty = ord.quantity || 1;
+    const totalPrice = ord.total_price !== undefined ? ord.total_price : (unitPrice * qty);
     setOrderModal({
       isOpen: true,
       isEdit: true,
-      data: { ...ord }
+      data: { 
+        ...ord,
+        unit_price: unitPrice,
+        quantity: qty,
+        total_price: totalPrice
+      }
     });
   };
 
@@ -217,10 +334,19 @@ export default function AdminDashboard() {
       return;
     }
 
+    const unitPrice = parseFloat(data.unit_price) || 0;
+    const qty = parseInt(data.quantity, 10) || 1;
+    const orderData = {
+      ...data,
+      unit_price: unitPrice,
+      quantity: qty,
+      total_price: unitPrice * qty
+    };
+
     if (isEdit) {
-      await supabase.updateOrder(data.id, data);
+      await supabase.updateOrder(orderData.id, orderData);
     } else {
-      await supabase.addOrder(data);
+      await supabase.addOrder(orderData);
     }
     setOrderModal({ isOpen: false, isEdit: false, data: null });
     await loadAll();
@@ -478,31 +604,9 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('orders')}
           >
             <ShoppingCart size={18} />
-            <span>1. 주문 관리</span>
+            <span>주문 관리</span>
             <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
               {orders.length}
-            </span>
-          </button>
-
-          <button 
-            className={`sidebar-link ${activeTab === 'finished' ? 'active' : ''}`}
-            onClick={() => setActiveTab('finished')}
-          >
-            <Package size={18} />
-            <span>2. 완제품 관리</span>
-            <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
-              {finishedGoods.length}
-            </span>
-          </button>
-
-          <button 
-            className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`}
-            onClick={() => setActiveTab('products')}
-          >
-            <Layers size={18} />
-            <span>3. 상품(낱개) 관리</span>
-            <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
-              {products.length}
             </span>
           </button>
 
@@ -511,9 +615,31 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('raw')}
           >
             <Boxes size={18} />
-            <span>4. 원재료 관리</span>
+            <span>1. 원재료 관리</span>
             <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
               {rawMaterials.length}
+            </span>
+          </button>
+
+          <button 
+            className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`}
+            onClick={() => setActiveTab('products')}
+          >
+            <Layers size={18} />
+            <span>2. 상품(낱개) 관리</span>
+            <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
+              {products.length}
+            </span>
+          </button>
+
+          <button 
+            className={`sidebar-link ${activeTab === 'finished' ? 'active' : ''}`}
+            onClick={() => setActiveTab('finished')}
+          >
+            <Package size={18} />
+            <span>3. 완제품 관리</span>
+            <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
+              {finishedGoods.length}
             </span>
           </button>
 
@@ -522,7 +648,7 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('logs')}
           >
             <History size={18} />
-            <span>5. 변경 내역 (감사)</span>
+            <span>4. 변경 내역 (감사)</span>
             <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
               {inventoryLogs.length}
             </span>
@@ -628,17 +754,31 @@ export default function AdminDashboard() {
               },
               {
                 key: 'total_price',
-                label: '합계 금액 (자동계산)',
+                label: '합계 금액 (주문시점 고정)',
                 align: 'right',
-                width: '140px',
+                width: '150px',
                 render: (_, row) => {
-                  const good = finishedGoods.find(g => g.name === row.product_name || g.id === row.product_id);
-                  const price = good ? good.price : 20000;
-                  const total = price * (row.quantity || 1);
+                  let total = row.total_price;
+                  if (total === undefined || total === null) {
+                    if (row.unit_price !== undefined && row.unit_price !== null) {
+                      total = Number(row.unit_price) * (row.quantity || 1);
+                    } else {
+                      const good = finishedGoods.find(g => g.name === row.product_name || g.id === row.product_id);
+                      const price = good ? good.price : 20000;
+                      total = price * (row.quantity || 1);
+                    }
+                  }
                   return (
-                    <strong style={{ color: '#2D6A4F', fontSize: '15px' }}>
-                      {formatCurrency(total)}
-                    </strong>
+                    <div>
+                      <strong style={{ color: '#2D6A4F', fontSize: '15px' }}>
+                        {formatCurrency(total)}
+                      </strong>
+                      {row.unit_price ? (
+                        <div style={{ fontSize: '11px', color: '#8C6F3E', marginTop: '2px' }}>
+                          단가: {formatCurrency(row.unit_price)}
+                        </div>
+                      ) : null}
+                    </div>
                   );
                 }
               },
@@ -721,6 +861,7 @@ export default function AdminDashboard() {
             searchKeys={['name', 'set_type']}
             searchPlaceholder="완제품 세트명, 세트 구분 검색..."
             sortOptions={[
+              { label: '설정순 (기본)', key: '_order', dir: 'asc' },
               { label: '세트명순', key: 'name', dir: 'asc' },
               { label: '가격 높은순', key: 'price', dir: 'desc' },
               { label: '가격 낮은순', key: 'price', dir: 'asc' },
@@ -812,6 +953,7 @@ export default function AdminDashboard() {
             searchKeys={['name']}
             searchPlaceholder="상품명 검색..."
             sortOptions={[
+              { label: '설정순 (기본)', key: '_order', dir: 'asc' },
               { label: '상품명순', key: 'name', dir: 'asc' },
               { label: '재고 많은순', key: 'stock', dir: 'desc' },
               { label: '재고 적은순', key: 'stock', dir: 'asc' }
@@ -888,6 +1030,7 @@ export default function AdminDashboard() {
             searchKeys={['name', 'unit']}
             searchPlaceholder="원재료명, 단위 검색..."
             sortOptions={[
+              { label: '설정순 (기본)', key: '_order', dir: 'asc' },
               { label: '원재료명순', key: 'name', dir: 'asc' },
               { label: '재고 많은순', key: 'stock', dir: 'desc' },
               { label: '재고 적은순', key: 'stock', dir: 'asc' }
@@ -1116,8 +1259,8 @@ export default function AdminDashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#FAF6EE', borderBottom: '1px solid #EAE8E3', color: '#6B6862' }}>
-                    <th style={{ padding: '10px 14px', textAlign: 'left' }}>원재료명</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'right', width: '160px' }}>단위당 가격 (DB)</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left' }}>항목명 (직접수정)</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right', width: '220px' }}>단위당 가격 및 단위</th>
                     <th style={{ padding: '10px 14px', textAlign: 'right', width: '160px' }}>투입 소요량</th>
                     <th style={{ padding: '10px 14px', textAlign: 'right', width: '140px' }}>환산 원가</th>
                     <th style={{ padding: '10px 14px', textAlign: 'center', width: '70px' }}>삭제</th>
@@ -1128,29 +1271,56 @@ export default function AdminDashboard() {
                     const rowCost = Math.round((item.unitPrice || 0) * (item.qty || 0));
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #F0EEE9' }}>
-                        <td style={{ padding: '10px 14px', fontWeight: '700' }}>{item.name}</td>
-                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                        <td style={{ padding: '10px 14px' }}>
                           <input
-                            type="number"
-                            value={item.unitPrice}
+                            type="text"
+                            value={item.name || ''}
                             onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0;
-                              setCalcRecipeItems(prev => prev.map((it, i) => i === idx ? { ...it, unitPrice: val } : it));
+                              const val = e.target.value;
+                              setCalcRecipeItems(prev => prev.map((it, i) => i === idx ? { ...it, name: val } : it));
                             }}
-                            style={{ width: '100px', padding: '4px 8px', textAlign: 'right', border: '1px solid #EAE8E3', borderRadius: '6px' }}
-                          /> 원/{item.unit}
+                            placeholder="항목명 (예: 오란다 알갱이, 박스비 등)"
+                            style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontWeight: '700', fontSize: '13px' }}
+                          />
                         </td>
                         <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.qty}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0;
-                              setCalcRecipeItems(prev => prev.map((it, i) => i === idx ? { ...it, qty: val } : it));
-                            }}
-                            style={{ width: '80px', padding: '4px 8px', textAlign: 'right', border: '1px solid #EAE8E3', borderRadius: '6px' }}
-                          /> {item.unit}
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <input
+                              type="number"
+                              value={item.unitPrice !== undefined ? item.unitPrice : 0}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setCalcRecipeItems(prev => prev.map((it, i) => i === idx ? { ...it, unitPrice: val } : it));
+                              }}
+                              style={{ width: '90px', padding: '4px 8px', textAlign: 'right', border: '1px solid #EAE8E3', borderRadius: '6px', fontSize: '13px' }}
+                            />
+                            <span style={{ fontSize: '12px', color: '#6B6862' }}>원 /</span>
+                            <input
+                              type="text"
+                              value={item.unit || 'kg'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCalcRecipeItems(prev => prev.map((it, i) => i === idx ? { ...it, unit: val } : it));
+                              }}
+                              placeholder="단위"
+                              style={{ width: '55px', padding: '4px 6px', textAlign: 'center', border: '1px solid #EAE8E3', borderRadius: '6px', fontSize: '13px' }}
+                            />
+                          </div>
+                        </td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={item.qty !== undefined ? item.qty : 0}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setCalcRecipeItems(prev => prev.map((it, i) => i === idx ? { ...it, qty: val } : it));
+                              }}
+                              style={{ width: '80px', padding: '4px 8px', textAlign: 'right', border: '1px solid #EAE8E3', borderRadius: '6px', fontSize: '13px' }}
+                            />
+                            <span style={{ fontSize: '12px', color: '#6B6862', minWidth: '24px' }}>{item.unit || 'kg'}</span>
+                          </div>
                         </td>
                         <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: '#2D6A4F' }}>
                           {formatCurrency(rowCost)}
@@ -1158,9 +1328,10 @@ export default function AdminDashboard() {
                         <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                           <button
                             onClick={() => setCalcRecipeItems(prev => prev.filter((_, i) => i !== idx))}
-                            style={{ background: 'none', border: 'none', color: '#C0392B', cursor: 'pointer' }}
+                            style={{ background: 'none', border: 'none', color: '#C0392B', cursor: 'pointer', padding: '4px' }}
+                            title="항목 제거"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={15} />
                           </button>
                         </td>
                       </tr>
@@ -1172,10 +1343,16 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
                 <button
                   onClick={() => {
-                    const first = rawMaterials[0];
-                    if (first) {
-                      setCalcRecipeItems(prev => [...prev, { id: first.id, name: first.name, unitPrice: first.unit_price || 10000, qty: 0.1, unit: first.unit }]);
-                    }
+                    setCalcRecipeItems(prev => [
+                      ...prev,
+                      {
+                        id: `calc_item_${Date.now()}`,
+                        name: '새 원부자재/항목',
+                        unitPrice: 10000,
+                        qty: 0.1,
+                        unit: 'kg'
+                      }
+                    ]);
                   }}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #EAE8E3', backgroundColor: '#FAF6EE', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }}
                 >
@@ -1274,12 +1451,22 @@ export default function AdminDashboard() {
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
                   />
                 </div>
+
+                <ImageFieldEditor
+                  label="공지 팝업 첨부 이미지 (선택)"
+                  value={landingSettings.popup?.image || ''}
+                  onChange={(img) => setLandingSettings(prev => ({
+                    ...prev,
+                    popup: { ...prev.popup, image: img }
+                  }))}
+                  placeholder="공지 이미지 URL 또는 PC 사진 업로드"
+                />
               </div>
             </div>
 
-            {/* Hero Copy Settings */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '12px', padding: '20px' }}>
-              <strong style={{ fontSize: '16px', display: 'block', marginBottom: '14px' }}>2. 메인 배너(Hero) 문구</strong>
+            {/* Hero Copy & Image Settings */}
+            <div style={{ border: '1px solid #EAE8E3', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+              <strong style={{ fontSize: '16px', display: 'block', marginBottom: '14px' }}>2. 메인 배너 (Hero Section) 설정</strong>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>메인 타이틀</label>
@@ -1303,6 +1490,114 @@ export default function AdminDashboard() {
                       hero: { ...prev.hero, subtitle: e.target.value }
                     }))}
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
+                  />
+                </div>
+
+                <ImageFieldEditor
+                  label="메인 히어로 대표 사진"
+                  value={landingSettings.hero?.image || 'images/yuzu_oranda_hero.png'}
+                  onChange={(img) => setLandingSettings(prev => ({
+                    ...prev,
+                    hero: { ...prev.hero, image: img }
+                  }))}
+                  placeholder="메인 비주얼 이미지 URL 또는 PC 사진 업로드"
+                />
+              </div>
+            </div>
+
+            {/* Brand Story Image Settings */}
+            <div style={{ border: '1px solid #EAE8E3', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+              <strong style={{ fontSize: '16px', display: 'block', marginBottom: '14px' }}>3. 브랜드 스토리 대표 사진 설정</strong>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <ImageFieldEditor
+                  label="브랜드 스토리 소개 사진 (제조 과정 및 제품 연출컷)"
+                  value={landingSettings.brandStory?.image || 'images/yuzu_classic_oranda.png'}
+                  onChange={(img) => setLandingSettings(prev => ({
+                    ...prev,
+                    brandStory: { ...prev.brandStory, image: img }
+                  }))}
+                  placeholder="스토리 이미지 URL 또는 PC 사진 업로드"
+                />
+              </div>
+            </div>
+
+            {/* Product Lineup Photos Settings */}
+            <div style={{ border: '1px solid #EAE8E3', borderRadius: '12px', padding: '20px' }}>
+              <strong style={{ fontSize: '16px', display: 'block', marginBottom: '6px' }}>4. 제품 소개 라인업 사진 설정 (4종 세트)</strong>
+              <p style={{ fontSize: '13px', color: '#6B6862', margin: '0 0 16px 0' }}>
+                메인 랜딩페이지의 각 완제품 세트 카드에 노출되는 사진을 교체합니다.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                <div style={{ border: '1px solid #F0EEE9', padding: '14px', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
+                  <ImageFieldEditor
+                    label="[든든세트] 사진 (18개입)"
+                    value={landingSettings.products?.deundeun?.image || defaultLandingSettings.products.deundeun.image}
+                    onChange={(img) => setLandingSettings(prev => ({
+                      ...prev,
+                      products: {
+                        ...defaultLandingSettings.products,
+                        ...(prev.products || {}),
+                        deundeun: {
+                          ...(prev.products?.deundeun || defaultLandingSettings.products.deundeun || {}),
+                          image: img
+                        }
+                      }
+                    }))}
+                  />
+                </div>
+
+                <div style={{ border: '1px solid #F0EEE9', padding: '14px', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
+                  <ImageFieldEditor
+                    label="[실속세트] 사진 (12개입)"
+                    value={landingSettings.products?.silsok?.image || defaultLandingSettings.products.silsok.image}
+                    onChange={(img) => setLandingSettings(prev => ({
+                      ...prev,
+                      products: {
+                        ...defaultLandingSettings.products,
+                        ...(prev.products || {}),
+                        silsok: {
+                          ...(prev.products?.silsok || defaultLandingSettings.products.silsok || {}),
+                          image: img
+                        }
+                      }
+                    }))}
+                  />
+                </div>
+
+                <div style={{ border: '1px solid #F0EEE9', padding: '14px', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
+                  <ImageFieldEditor
+                    label="[미니세트] 사진 (6개입)"
+                    value={landingSettings.products?.mini?.image || defaultLandingSettings.products.mini.image}
+                    onChange={(img) => setLandingSettings(prev => ({
+                      ...prev,
+                      products: {
+                        ...defaultLandingSettings.products,
+                        ...(prev.products || {}),
+                        mini: {
+                          ...(prev.products?.mini || defaultLandingSettings.products.mini || {}),
+                          image: img
+                        }
+                      }
+                    }))}
+                  />
+                </div>
+
+                <div style={{ border: '1px solid #F0EEE9', padding: '14px', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
+                  <ImageFieldEditor
+                    label="[낱개] 사진 (1개입)"
+                    value={landingSettings.products?.natgae?.image || defaultLandingSettings.products.natgae.image}
+                    onChange={(img) => setLandingSettings(prev => ({
+                      ...prev,
+                      products: {
+                        ...defaultLandingSettings.products,
+                        ...(prev.products || {}),
+                        natgae: {
+                          ...(prev.products?.natgae || defaultLandingSettings.products.natgae || {}),
+                          image: img
+                        }
+                      }
+                    }))}
                   />
                 </div>
               </div>
@@ -1370,7 +1665,8 @@ export default function AdminDashboard() {
                     data: {
                       ...prev.data,
                       product_id: e.target.value,
-                      product_name: sel?.name || ''
+                      product_name: sel?.name || '',
+                      unit_price: sel?.price || 0
                     }
                   }));
                 }}
@@ -1383,6 +1679,18 @@ export default function AdminDashboard() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px' }}>
+                  주문 시점 단가 (원)
+                </label>
+                <input
+                  type="number"
+                  value={orderModal.data.unit_price !== undefined ? orderModal.data.unit_price : ''}
+                  onChange={(e) => setOrderModal(prev => ({ ...prev, data: { ...prev.data, unit_price: parseFloat(e.target.value) || 0 } }))}
+                  placeholder="단가 입력"
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
+                />
+              </div>
+              <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px' }}>수량</label>
                 <input
                   type="number"
@@ -1392,19 +1700,33 @@ export default function AdminDashboard() {
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
                 />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px' }}>주문 상태</label>
-                <select
-                  value={orderModal.data.status}
-                  onChange={(e) => setOrderModal(prev => ({ ...prev, data: { ...prev.data, status: e.target.value } }))}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
-                >
-                  <option value="주문 접수">주문 접수</option>
-                  <option value="상품 준비">상품 준비</option>
-                  <option value="수령 완료">수령 완료</option>
-                  <option value="취소">취소</option>
-                </select>
-              </div>
+            </div>
+            <div style={{
+              backgroundColor: '#FAF6EE',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: '1px solid #EAE8E3',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#6B6862' }}>예상 합계 금액:</span>
+              <strong style={{ fontSize: '17px', color: '#2D6A4F' }}>
+                {formatCurrency((orderModal.data.unit_price || 0) * (orderModal.data.quantity || 1))}
+              </strong>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px' }}>주문 상태</label>
+              <select
+                value={orderModal.data.status}
+                onChange={(e) => setOrderModal(prev => ({ ...prev, data: { ...prev.data, status: e.target.value } }))}
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
+              >
+                <option value="주문 접수">주문 접수</option>
+                <option value="상품 준비">상품 준비</option>
+                <option value="수령 완료">수령 완료</option>
+                <option value="취소">취소</option>
+              </select>
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px' }}>특이사항 메모</label>
@@ -1487,6 +1809,110 @@ export default function AdminDashboard() {
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
               />
             </div>
+
+            {/* 세트 상품 세부 구성 편집기 */}
+            <div style={{ marginTop: '4px', border: '1px solid #EAE8E3', borderRadius: '10px', padding: '14px', backgroundColor: '#FAF9F6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '700', color: '#2B2A27' }}>세트 구성 상품 (낱개 조합)</label>
+                <span style={{ fontSize: '12px', color: '#6B6862' }}>총 {(finishedModal.data.composition || []).length}개 항목</span>
+              </div>
+
+              {/* Existing composition items */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                {(!finishedModal.data.composition || finishedModal.data.composition.length === 0) ? (
+                  <div style={{ fontSize: '12px', color: '#A09E9B', textAlign: 'center', padding: '10px' }}>
+                    등록된 구성 상품이 없습니다. 아래에서 상품을 선택하여 추가해 주세요.
+                  </div>
+                ) : (
+                  finishedModal.data.composition.map((comp, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #EAE8E3' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#2B2A27' }}>{comp.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: '#6B6862' }}>수량:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={comp.qty || 1}
+                          onChange={(e) => {
+                            const newQty = parseInt(e.target.value, 10) || 1;
+                            setFinishedModal(prev => {
+                              const newComp = [...(prev.data.composition || [])];
+                              newComp[idx] = { ...newComp[idx], qty: newQty };
+                              return { ...prev, data: { ...prev.data, composition: newComp } };
+                            });
+                          }}
+                          style={{ width: '60px', padding: '4px 6px', textAlign: 'center', borderRadius: '4px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                        />
+                        <span style={{ fontSize: '12px' }}>개</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFinishedModal(prev => ({
+                              ...prev,
+                              data: {
+                                ...prev.data,
+                                composition: (prev.data.composition || []).filter((_, i) => i !== idx)
+                              }
+                            }));
+                          }}
+                          style={{ background: 'none', border: 'none', color: '#C0392B', cursor: 'pointer', padding: '2px 4px' }}
+                          title="항목 제거"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Add new composition item */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '10px', borderTop: '1px dashed #EAE8E3' }}>
+                <select
+                  id="fin-comp-prod-select"
+                  style={{ flexGrow: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  defaultValue={products[0]?.id || ''}
+                >
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <input
+                  id="fin-comp-qty-input"
+                  type="number"
+                  min="1"
+                  defaultValue={1}
+                  style={{ width: '60px', padding: '8px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', textAlign: 'center' }}
+                  placeholder="수량"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const selEl = document.getElementById('fin-comp-prod-select');
+                    const qtyEl = document.getElementById('fin-comp-qty-input');
+                    const pId = selEl?.value;
+                    const q = parseInt(qtyEl?.value, 10) || 1;
+                    const targetProd = products.find(p => p.id === pId);
+                    if (!targetProd) return;
+                    setFinishedModal(prev => {
+                      const current = prev.data.composition || [];
+                      const existingIdx = current.findIndex(c => c.product_id === pId);
+                      let updated;
+                      if (existingIdx >= 0) {
+                        updated = [...current];
+                        updated[existingIdx] = { ...updated[existingIdx], qty: updated[existingIdx].qty + q };
+                      } else {
+                        updated = [...current, { product_id: targetProd.id, name: targetProd.name, qty: q }];
+                      }
+                      return { ...prev, data: { ...prev.data, composition: updated } };
+                    });
+                  }}
+                  style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: '#2D6A4F', color: '#FFFFFF', fontSize: '13px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  + 구성 추가
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </ModalPopup>
@@ -1498,7 +1924,7 @@ export default function AdminDashboard() {
         isOpen={productModal.isOpen}
         onClose={() => setProductModal({ isOpen: false, isEdit: false, data: null })}
         title={productModal.isEdit ? "상품(낱개) 수정" : "신규 상품 등록"}
-        subtitle="낱개 상품명과 재고량을 관리합니다."
+        subtitle="낱개 상품명, 재고량 및 포함 원재료 목록을 관리합니다."
         footerActions={
           <>
             <button
@@ -1536,6 +1962,110 @@ export default function AdminDashboard() {
                 onChange={(e) => setProductModal(prev => ({ ...prev, data: { ...prev.data, stock: parseFloat(e.target.value) || 0 } }))}
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
               />
+            </div>
+
+            {/* 상품 세부 원재료 구성 편집기 */}
+            <div style={{ marginTop: '4px', border: '1px solid #EAE8E3', borderRadius: '10px', padding: '14px', backgroundColor: '#FAF9F6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '700', color: '#2B2A27' }}>포함 원재료 구성 (단순 기록용)</label>
+                <span style={{ fontSize: '12px', color: '#6B6862' }}>총 {(productModal.data.materials || []).length}개</span>
+              </div>
+
+              {/* Existing materials */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                {(!productModal.data.materials || productModal.data.materials.length === 0) ? (
+                  <span style={{ fontSize: '12px', color: '#A09E9B' }}>등록된 원재료가 없습니다. 아래에서 원재료를 추가해 주세요.</span>
+                ) : (
+                  productModal.data.materials.map((mat, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #EAE8E3',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#2B2A27'
+                      }}
+                    >
+                      {mat.name}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductModal(prev => ({
+                            ...prev,
+                            data: {
+                              ...prev.data,
+                              materials: (prev.data.materials || []).filter((_, i) => i !== idx)
+                            }
+                          }));
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#C0392B', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                        title="원재료 삭제"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+
+              {/* Add new material control */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '10px', borderTop: '1px dashed #EAE8E3' }}>
+                <select
+                  id="prod-mat-select"
+                  style={{ flexGrow: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  defaultValue={rawMaterials[0]?.name || ''}
+                  onChange={(e) => {
+                    const customEl = document.getElementById('prod-mat-custom-input');
+                    if (customEl) {
+                      customEl.style.display = e.target.value === '__custom__' ? 'block' : 'none';
+                    }
+                  }}
+                >
+                  {rawMaterials.map(m => (
+                    <option key={m.id} value={m.name}>{m.name}</option>
+                  ))}
+                  <option value="__custom__">직접 입력...</option>
+                </select>
+                <input
+                  id="prod-mat-custom-input"
+                  type="text"
+                  placeholder="원재료명 입력"
+                  style={{ width: '120px', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const selEl = document.getElementById('prod-mat-select');
+                    const customEl = document.getElementById('prod-mat-custom-input');
+                    let matName = selEl?.value;
+                    if (matName === '__custom__') {
+                      matName = customEl?.value?.trim();
+                    }
+                    if (!matName) {
+                      alert('원재료명을 입력해 주세요.');
+                      return;
+                    }
+                    setProductModal(prev => {
+                      const current = prev.data.materials || [];
+                      if (current.some(m => m.name === matName)) {
+                        alert('이미 포함된 원재료입니다.');
+                        return prev;
+                      }
+                      return { ...prev, data: { ...prev.data, materials: [...current, { name: matName }] } };
+                    });
+                    if (customEl) customEl.value = '';
+                  }}
+                  style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: '#2D6A4F', color: '#FFFFFF', fontSize: '13px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  + 원재료 추가
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS public.orders (
     product_id TEXT,
     product_name TEXT NOT NULL,
     quantity NUMERIC DEFAULT 1,
+    unit_price NUMERIC DEFAULT 0,
+    total_price NUMERIC DEFAULT 0,
     status TEXT DEFAULT '주문 접수',
     memo TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()

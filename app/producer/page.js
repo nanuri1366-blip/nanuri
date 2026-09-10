@@ -33,6 +33,7 @@ export default function ProducerPage() {
   const [isMounted, setIsMounted] = useState(false);
 
   // 2. Core Entities State
+  const [activeProducerTab, setActiveProducerTab] = useState('raw'); // 'raw', 'products', 'finished'
   const [rawMaterials, setRawMaterials] = useState([]);
   const [products, setProducts] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
@@ -427,222 +428,280 @@ export default function ProducerPage() {
       <main className="producer-main-grid">
         {/* Left Side: Work inputs & Save */}
         <div className="producer-left-panel">
+          {/* Top Tab Bar with Batch Save Button */}
+          <div className="producer-top-tabbar">
+            <div className="producer-tabs-group">
+              <button
+                type="button"
+                className={`producer-tab-btn ${activeProducerTab === 'raw' ? 'active' : ''}`}
+                onClick={() => setActiveProducerTab('raw')}
+              >
+                <Package size={17} />
+                <span>1. 원재료 재고 관리</span>
+                {Object.values(rawAdjusts).filter(v => v && v !== 0 && v !== '').length > 0 && (
+                  <span className="tab-badge-indicator">
+                    {Object.values(rawAdjusts).filter(v => v && v !== 0 && v !== '').length}
+                  </span>
+                )}
+              </button>
 
-          {/* Section 1: Raw Materials Stock */}
-          <div className="producer-card">
-            <div className="producer-card-header">
-              <h2>
-                <Package size={18} style={{ color: '#2D6A4F' }} />
-                1. 원재료 재고 관리
-              </h2>
-              <span style={{ fontSize: '13px', color: '#6B6862' }}>
-                원재료 입고(+) / 사용(-) 조정
-              </span>
+              <button
+                type="button"
+                className={`producer-tab-btn ${activeProducerTab === 'products' ? 'active' : ''}`}
+                onClick={() => setActiveProducerTab('products')}
+              >
+                <ChefHat size={17} />
+                <span>2. 상품 낱개 생산량</span>
+                {Object.values(productAdjusts).filter(v => v && v !== 0 && v !== '').length > 0 && (
+                  <span className="tab-badge-indicator">
+                    {Object.values(productAdjusts).filter(v => v && v !== 0 && v !== '').length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className={`producer-tab-btn ${activeProducerTab === 'finished' ? 'active' : ''}`}
+                onClick={() => setActiveProducerTab('finished')}
+              >
+                <Factory size={17} />
+                <span>3. 완제품(세트) 생산량</span>
+                {Object.values(finishedAdjusts).filter(v => v && v !== 0 && v !== '').length > 0 && (
+                  <span className="tab-badge-indicator">
+                    {Object.values(finishedAdjusts).filter(v => v && v !== 0 && v !== '').length}
+                  </span>
+                )}
+              </button>
             </div>
-            <div className="producer-card-body">
-              {rawMaterials.map(m => {
-                const adjVal = rawAdjusts[m.id] !== undefined ? rawAdjusts[m.id] : '';
-                return (
-                  <div key={m.id} className="producer-item-row">
-                    <div className="producer-item-info">
-                      <div className="producer-item-name">
-                        <span>{m.name}</span>
-                        <button
-                          onClick={() => openEditModal('raw', m)}
-                          title="항목 정보 수정 (팝업)"
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#A09E9B',
-                            cursor: 'pointer',
-                            padding: '2px'
-                          }}
-                        >
-                          <Edit3 size={13} />
-                        </button>
-                      </div>
-                      <div className="producer-item-meta">
-                        <StockBadge stock={m.stock} unit={m.unit} minThreshold={15} />
-                        <RecentLogViewer logs={inventoryLogs} itemName={m.name} category="raw_materials" />
-                      </div>
-                    </div>
 
-                    <div className="producer-adjust-group">
-                      <button 
-                        className="btn-adjust" 
-                        onClick={() => handleQuickStep(setRawAdjusts, m.id, -1)}
-                        title="1 차감"
-                      >
-                        -1
-                      </button>
-                      <button 
-                        className="btn-adjust" 
-                        onClick={() => handleQuickStep(setRawAdjusts, m.id, 1)}
-                        title="1 추가"
-                      >
-                        +1
-                      </button>
-                      <input
-                        type="number"
-                        className="producer-qty-input"
-                        placeholder="0"
-                        value={adjVal}
-                        onChange={(e) => handleAmountChange(setRawAdjusts, m.id, e.target.value)}
-                      />
-                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#6B6862', minWidth: '24px' }}>
-                        {m.unit}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="producer-top-actions">
+              <button
+                type="button"
+                onClick={handleOpenSaveModal}
+                disabled={stagedCount === 0 || isSaving}
+                className="btn-producer-top-save"
+                title="모든 탭에서 입력한 작업 내역을 한 번에 저장합니다"
+              >
+                <Save size={18} />
+                <span>작업 내역 일괄 저장</span>
+                {stagedCount > 0 && (
+                  <span className="staged-count-pill">
+                    {stagedCount}건 대기
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
-          {/* Section 2: Products (낱개) Production */}
-          <div className="producer-card">
-            <div className="producer-card-header">
-              <h2>
-                <ChefHat size={18} style={{ color: '#FFAA00' }} />
-                2. 상품 낱개 생산량 관리
-              </h2>
-              <span style={{ fontSize: '13px', color: '#6B6862' }}>
-                가공 생산된 낱개 오란다/까부리 등록
-              </span>
-            </div>
-            <div className="producer-card-body">
-              {products.map(p => {
-                const adjVal = productAdjusts[p.id] !== undefined ? productAdjusts[p.id] : '';
-                return (
-                  <div key={p.id} className="producer-item-row">
-                    <div className="producer-item-info">
-                      <div className="producer-item-name">
-                        <span>{p.name}</span>
-                        <button
-                          onClick={() => openEditModal('product', p)}
-                          title="상품 정보 수정 (팝업)"
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#A09E9B',
-                            cursor: 'pointer',
-                            padding: '2px'
-                          }}
+          {/* TAB 1: Raw Materials */}
+          {activeProducerTab === 'raw' && (
+            <div className="producer-card">
+              <div className="producer-card-header">
+                <h2>
+                  <Package size={18} style={{ color: '#2D6A4F' }} />
+                  1. 원재료 재고 관리
+                </h2>
+                <span style={{ fontSize: '13px', color: '#6B6862' }}>
+                  원재료 입고(+) / 사용(-) 수량을 조정하세요
+                </span>
+              </div>
+              <div className="producer-card-body">
+                {rawMaterials.map(m => {
+                  const adjVal = rawAdjusts[m.id] !== undefined ? rawAdjusts[m.id] : '';
+                  return (
+                    <div key={m.id} className="producer-item-row">
+                      <div className="producer-item-info">
+                        <div className="producer-item-name">
+                          <span>{m.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal('raw', m)}
+                            className="btn-producer-item-edit"
+                            title="항목 정보 수정 (팝업)"
+                          >
+                            <Edit3 size={12} />
+                            <span>수정</span>
+                          </button>
+                        </div>
+                        <div className="producer-item-meta">
+                          <StockBadge stock={m.stock} unit={m.unit} />
+                          <RecentLogViewer logs={inventoryLogs} itemName={m.name} category="raw_materials" />
+                        </div>
+                      </div>
+
+                      <div className="producer-adjust-group">
+                        <button 
+                          className="btn-adjust" 
+                          onClick={() => handleQuickStep(setRawAdjusts, m.id, -1)}
+                          title="1 차감"
                         >
-                          <Edit3 size={13} />
+                          -1
                         </button>
-                      </div>
-                      <div className="producer-item-meta">
-                        <StockBadge stock={p.stock} unit="개" minThreshold={50} />
-                        <RecentLogViewer logs={inventoryLogs} itemName={p.name} category="products" />
-                      </div>
-                    </div>
-
-                    <div className="producer-adjust-group">
-                      <button 
-                        className="btn-adjust" 
-                        onClick={() => handleQuickStep(setProductAdjusts, p.id, -10)}
-                        title="10개 차감"
-                      >
-                        -10
-                      </button>
-                      <button 
-                        className="btn-adjust" 
-                        onClick={() => handleQuickStep(setProductAdjusts, p.id, 10)}
-                        title="10개 추가"
-                      >
-                        +10
-                      </button>
-                      <input
-                        type="number"
-                        className="producer-qty-input"
-                        placeholder="0"
-                        value={adjVal}
-                        onChange={(e) => handleAmountChange(setProductAdjusts, p.id, e.target.value)}
-                      />
-                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#6B6862', minWidth: '24px' }}>
-                        개
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Section 3: Finished Goods (세트) Production */}
-          <div className="producer-card">
-            <div className="producer-card-header">
-              <h2>
-                <Factory size={18} style={{ color: '#2D6A4F' }} />
-                3. 완제품(세트) 생산량 관리
-              </h2>
-              <span style={{ fontSize: '13px', color: '#6B6862' }}>
-                세트 포장 완료된 완제품 재고 입고(+)
-              </span>
-            </div>
-            <div className="producer-card-body">
-              {finishedGoods.map(g => {
-                const adjVal = finishedAdjusts[g.id] !== undefined ? finishedAdjusts[g.id] : '';
-                return (
-                  <div key={g.id} className="producer-item-row">
-                    <div className="producer-item-info">
-                      <div className="producer-item-name">
-                        <span>{g.name}</span>
-                        <span style={{ fontSize: '11px', color: '#8C6F3E', backgroundColor: '#FFEFA6', padding: '1px 6px', borderRadius: '4px' }}>
-                          {g.set_type}세트
+                        <button 
+                          className="btn-adjust" 
+                          onClick={() => handleQuickStep(setRawAdjusts, m.id, 1)}
+                          title="1 추가"
+                        >
+                          +1
+                        </button>
+                        <input
+                          type="number"
+                          className="producer-qty-input"
+                          placeholder="0"
+                          value={adjVal}
+                          onChange={(e) => handleAmountChange(setRawAdjusts, m.id, e.target.value)}
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#6B6862', minWidth: '24px' }}>
+                          {m.unit}
                         </span>
-                        <button
-                          onClick={() => openEditModal('finished', g)}
-                          title="완제품 정보 수정 (팝업)"
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#A09E9B',
-                            cursor: 'pointer',
-                            padding: '2px'
-                          }}
-                        >
-                          <Edit3 size={13} />
-                        </button>
-                      </div>
-                      <div className="producer-item-meta">
-                        <StockBadge stock={g.stock} unit="박스" minThreshold={10} />
-                        <RecentLogViewer logs={inventoryLogs} itemName={g.name} category="finished_goods" />
                       </div>
                     </div>
-
-                    <div className="producer-adjust-group">
-                      <button 
-                        className="btn-adjust" 
-                        onClick={() => handleQuickStep(setFinishedAdjusts, g.id, -5)}
-                        title="5박스 차감"
-                      >
-                        -5
-                      </button>
-                      <button 
-                        className="btn-adjust" 
-                        onClick={() => handleQuickStep(setFinishedAdjusts, g.id, 5)}
-                        title="5박스 추가"
-                      >
-                        +5
-                      </button>
-                      <input
-                        type="number"
-                        className="producer-qty-input"
-                        placeholder="0"
-                        value={adjVal}
-                        onChange={(e) => handleAmountChange(setFinishedAdjusts, g.id, e.target.value)}
-                      />
-                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#6B6862', minWidth: '24px' }}>
-                        박스
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* TAB 2: Products */}
+          {activeProducerTab === 'products' && (
+            <div className="producer-card">
+              <div className="producer-card-header">
+                <h2>
+                  <ChefHat size={18} style={{ color: '#FFAA00' }} />
+                  2. 상품 낱개 생산량 관리
+                </h2>
+                <span style={{ fontSize: '13px', color: '#6B6862' }}>
+                  가공 생산된 낱개 오란다/까부리 등록
+                </span>
+              </div>
+              <div className="producer-card-body">
+                {products.map(p => {
+                  const adjVal = productAdjusts[p.id] !== undefined ? productAdjusts[p.id] : '';
+                  return (
+                    <div key={p.id} className="producer-item-row">
+                      <div className="producer-item-info">
+                        <div className="producer-item-name">
+                          <span>{p.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal('product', p)}
+                            className="btn-producer-item-edit"
+                            title="상품 정보 수정 (팝업)"
+                          >
+                            <Edit3 size={12} />
+                            <span>수정</span>
+                          </button>
+                        </div>
+                        <div className="producer-item-meta">
+                          <StockBadge stock={p.stock} unit="개" />
+                          <RecentLogViewer logs={inventoryLogs} itemName={p.name} category="products" />
+                        </div>
+                      </div>
+
+                      <div className="producer-adjust-group">
+                        <button 
+                          className="btn-adjust" 
+                          onClick={() => handleQuickStep(setProductAdjusts, p.id, -10)}
+                          title="10개 차감"
+                        >
+                          -10
+                        </button>
+                        <button 
+                          className="btn-adjust" 
+                          onClick={() => handleQuickStep(setProductAdjusts, p.id, 10)}
+                          title="10개 추가"
+                        >
+                          +10
+                        </button>
+                        <input
+                          type="number"
+                          className="producer-qty-input"
+                          placeholder="0"
+                          value={adjVal}
+                          onChange={(e) => handleAmountChange(setProductAdjusts, p.id, e.target.value)}
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#6B6862', minWidth: '24px' }}>
+                          개
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Finished Goods */}
+          {activeProducerTab === 'finished' && (
+            <div className="producer-card">
+              <div className="producer-card-header">
+                <h2>
+                  <Factory size={18} style={{ color: '#2D6A4F' }} />
+                  3. 완제품(세트) 생산량 관리
+                </h2>
+                <span style={{ fontSize: '13px', color: '#6B6862' }}>
+                  세트 포장 완료된 완제품 재고 입고(+)
+                </span>
+              </div>
+              <div className="producer-card-body">
+                {finishedGoods.map(g => {
+                  const adjVal = finishedAdjusts[g.id] !== undefined ? finishedAdjusts[g.id] : '';
+                  return (
+                    <div key={g.id} className="producer-item-row">
+                      <div className="producer-item-info">
+                        <div className="producer-item-name">
+                          <span>{g.name}</span>
+                          <span style={{ fontSize: '11px', color: '#8C6F3E', backgroundColor: '#FFEFA6', padding: '1px 6px', borderRadius: '4px' }}>
+                            {g.set_type}세트
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal('finished', g)}
+                            className="btn-producer-item-edit"
+                            title="완제품 정보 수정 (팝업)"
+                          >
+                            <Edit3 size={12} />
+                            <span>수정</span>
+                          </button>
+                        </div>
+                        <div className="producer-item-meta">
+                          <StockBadge stock={g.stock} unit="박스" />
+                          <RecentLogViewer logs={inventoryLogs} itemName={g.name} category="finished_goods" />
+                        </div>
+                      </div>
+
+                      <div className="producer-adjust-group">
+                        <button 
+                          className="btn-adjust" 
+                          onClick={() => handleQuickStep(setFinishedAdjusts, g.id, -5)}
+                          title="5박스 차감"
+                        >
+                          -5
+                        </button>
+                        <button 
+                          className="btn-adjust" 
+                          onClick={() => handleQuickStep(setFinishedAdjusts, g.id, 5)}
+                          title="5박스 추가"
+                        >
+                          +5
+                        </button>
+                        <input
+                          type="number"
+                          className="producer-qty-input"
+                          placeholder="0"
+                          value={adjVal}
+                          onChange={(e) => handleAmountChange(setFinishedAdjusts, g.id, e.target.value)}
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#6B6862', minWidth: '24px' }}>
+                          박스
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Bottom Action Save Bar */}
           <div className="producer-save-bar">
@@ -663,7 +722,7 @@ export default function ProducerPage() {
                 </span>
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B6862' }}>
-                저장 버튼을 누르면 모든 수량이 DB에 일괄 반영되고 우측에 변경 이력이 기록됩니다.
+                상단 또는 하단의 저장 버튼을 누르면 1, 2, 3 모든 탭의 수량이 DB에 일괄 반영됩니다.
               </p>
             </div>
 
@@ -677,7 +736,6 @@ export default function ProducerPage() {
               <span>작업 내역 일괄 저장</span>
             </button>
           </div>
-
         </div>
 
         {/* Right Side: Sidebar Logs */}

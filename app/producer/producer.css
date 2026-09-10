@@ -360,3 +360,132 @@
     max-height: none;
   }
 }
+
+/* Top Tab Bar & Batch Save */
+.producer-top-tabbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #FFFFFF;
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.producer-tabs-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.producer-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1.5px solid #EAE8E3;
+  background-color: #FAF9F6;
+  color: #6B6862;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.producer-tab-btn:hover {
+  background-color: #F0EEE9;
+  color: #2B2A27;
+}
+
+.producer-tab-btn.active {
+  background-color: #2D6A4F;
+  border-color: #2D6A4F;
+  color: #FFFFFF;
+  box-shadow: 0 3px 10px rgba(45, 106, 79, 0.25);
+}
+
+.tab-badge-indicator {
+  background-color: #FFAA00;
+  color: #2B2A27;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 10px;
+  margin-left: 2px;
+}
+
+.producer-tab-btn.active .tab-badge-indicator {
+  background-color: #FFEFA6;
+  color: #1B4332;
+}
+
+.producer-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-producer-top-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 10px;
+  border: none;
+  background-color: #2D6A4F;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.25);
+}
+
+.btn-producer-top-save:hover:not(:disabled) {
+  background-color: #1B4332;
+  transform: translateY(-1px);
+}
+
+.btn-producer-top-save:disabled {
+  background-color: #D6D3CC;
+  color: #8C8983;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.staged-count-pill {
+  background-color: #FFEFA6;
+  color: #8C6F3E;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* Item Edit Button */
+.btn-producer-item-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #D6D3CC;
+  background-color: #FAF6EE;
+  color: #2B2A27;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-producer-item-edit:hover {
+  background-color: #FFEFA6;
+  border-color: #FFAA00;
+}
+

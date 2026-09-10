@@ -52,7 +52,7 @@ export default function DataTable({
     }
 
     // 3. Sort
-    if (selectedSort) {
+    if (selectedSort && selectedSort !== '_order' && selectedSort !== 'default') {
       result.sort((a, b) => {
         let valA = a[selectedSort];
         let valB = b[selectedSort];
