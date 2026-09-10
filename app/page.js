@@ -7,6 +7,7 @@ import {
   Sparkles, 
   Smile, 
   Gift, 
+  ChevronLeft,
   ChevronRight, 
   Star, 
   Truck, 
@@ -25,6 +26,17 @@ import {
 } from 'lucide-react';
 
 const DEFAULT_LANDING_SETTINGS = {
+  popups: [
+    {
+      id: "popup_1",
+      enabled: false,
+      title: "공지사항",
+      content: "유자를 품은 오란다&까부리 홈페이지를 방문해 주셔서 감사합니다. 현재 단체 주문은 스마트스토어 또는 고객센터로 직접 문의 주시면 친절하게 안내해 드리겠습니다.",
+      image: "",
+      linkUrl: "https://smartstore.naver.com/kkaburioranda",
+      linkText: "자세히 보기"
+    }
+  ],
   popup: {
     enabled: false,
     title: "공지사항",
@@ -107,6 +119,7 @@ export default function Home() {
   // 3. Dynamic Landing Settings & Popup States
   const [landingSettings, setLandingSettings] = useState(DEFAULT_LANDING_SETTINGS);
   const [showPopup, setShowPopup] = useState(false);
+  const [currentPopupIndex, setCurrentPopupIndex] = useState(0);
 
   useEffect(() => {
     setIsMounted(true);
@@ -152,9 +165,22 @@ export default function Home() {
       if (localLanding) {
         try {
           const parsed = JSON.parse(localLanding);
+          const rawPopups = Array.isArray(parsed.popups) && parsed.popups.length > 0
+            ? parsed.popups
+            : (parsed.popup ? [{
+                id: 'popup_1',
+                enabled: !!parsed.popup.enabled,
+                title: parsed.popup.title || '공지사항',
+                content: parsed.popup.content || '',
+                image: parsed.popup.image || '',
+                linkUrl: parsed.popup.link || '',
+                linkText: '자세히 보기'
+              }] : DEFAULT_LANDING_SETTINGS.popups);
+
           currentLanding = {
             ...DEFAULT_LANDING_SETTINGS,
             ...parsed,
+            popups: rawPopups,
             popup: { ...DEFAULT_LANDING_SETTINGS.popup, ...(parsed.popup || {}) },
             hero: { ...DEFAULT_LANDING_SETTINGS.hero, ...(parsed.hero || {}) },
             brandStory: { ...DEFAULT_LANDING_SETTINGS.brandStory, ...(parsed.brandStory || {}) },
@@ -174,9 +200,22 @@ export default function Home() {
       // 2. Query Supabase
       const dbLanding = await supabase.getLandingSettings();
       if (dbLanding) {
+        const rawPopups = Array.isArray(dbLanding.popups) && dbLanding.popups.length > 0
+          ? dbLanding.popups
+          : (dbLanding.popup ? [{
+              id: 'popup_1',
+              enabled: !!dbLanding.popup.enabled,
+              title: dbLanding.popup.title || '공지사항',
+              content: dbLanding.popup.content || '',
+              image: dbLanding.popup.image || '',
+              linkUrl: dbLanding.popup.link || '',
+              linkText: '자세히 보기'
+            }] : (currentLanding.popups || DEFAULT_LANDING_SETTINGS.popups));
+
         currentLanding = {
           ...DEFAULT_LANDING_SETTINGS,
           ...dbLanding,
+          popups: rawPopups,
           popup: { ...DEFAULT_LANDING_SETTINGS.popup, ...(dbLanding.popup || {}) },
           hero: { ...DEFAULT_LANDING_SETTINGS.hero, ...(dbLanding.hero || {}) },
           brandStory: { ...DEFAULT_LANDING_SETTINGS.brandStory, ...(dbLanding.brandStory || {}) },
@@ -192,7 +231,8 @@ export default function Home() {
       }
 
       // 3. Handle notice popup logic
-      if (currentLanding.popup && currentLanding.popup.enabled) {
+      const activeList = (currentLanding.popups || []).filter(p => p && p.enabled);
+      if (activeList.length > 0) {
         const lastClosed = localStorage.getItem('yuzu_popup_last_closed');
         if (lastClosed) {
           const hoursPassed = (Date.now() - Number(lastClosed)) / (1000 * 60 * 60);
@@ -227,80 +267,151 @@ export default function Home() {
     setShowPopup(false);
   };
 
+  const activePopups = (landingSettings.popups && landingSettings.popups.length > 0 
+    ? landingSettings.popups 
+    : [landingSettings.popup]
+  ).filter(p => p && p.enabled);
+
+  const safeIndex = currentPopupIndex >= activePopups.length ? 0 : currentPopupIndex;
+  const curPopup = activePopups[safeIndex];
+
   return (
     <>
       {/* Notice Popup Modal */}
-      {isMounted && showPopup && landingSettings && landingSettings.popup && (
+      {isMounted && showPopup && curPopup && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 999999,
           padding: '20px',
-          backdropFilter: 'blur(3px)'
+          backdropFilter: 'blur(4px)'
         }}>
           <div style={{
             backgroundColor: 'white',
             borderRadius: '16px',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
             width: '100%',
-            maxWidth: '380px',
+            maxWidth: '400px',
             overflow: 'hidden',
             border: '1.5px solid var(--border-color, #EAE8E3)',
-            animation: 'fadeIn 0.3s ease-out'
+            animation: 'fadeIn 0.3s ease-out',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
-            {/* Title / Header */}
+            {/* Header with Title & Carousel Arrows */}
             <div style={{
               backgroundColor: 'var(--primary-yuzu, #FFC72C)',
               color: 'var(--text-dark, #2B2A27)',
-              padding: '20px',
-              textAlign: 'center',
-              position: 'relative'
+              padding: '16px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px'
             }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>
-                {landingSettings.popup.title || "공지사항"}
-              </h3>
+              {activePopups.length > 1 ? (
+                <button 
+                  type="button" 
+                  onClick={() => setCurrentPopupIndex((prev) => (prev > 0 ? prev - 1 : activePopups.length - 1))}
+                  style={{
+                    background: 'rgba(0,0,0,0.08)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'var(--text-dark, #2B2A27)'
+                  }}
+                  title="이전 공지"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              ) : <div style={{ width: '32px' }} />}
+
+              <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {curPopup.title || "공지사항"}
+                </h3>
+                {activePopups.length > 1 && (
+                  <span style={{
+                    display: 'inline-block',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    backgroundColor: 'rgba(0,0,0,0.12)',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    marginTop: '4px'
+                  }}>
+                    {safeIndex + 1} / {activePopups.length}
+                  </span>
+                )}
+              </div>
+
+              {activePopups.length > 1 ? (
+                <button 
+                  type="button" 
+                  onClick={() => setCurrentPopupIndex((prev) => (prev < activePopups.length - 1 ? prev + 1 : 0))}
+                  style={{
+                    background: 'rgba(0,0,0,0.08)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'var(--text-dark, #2B2A27)'
+                  }}
+                  title="다음 공지"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              ) : <div style={{ width: '32px' }} />}
             </div>
 
             {/* Optional Image */}
-            {landingSettings.popup.image && (
-              <div style={{ width: '100%', height: '180px', overflow: 'hidden' }}>
+            {curPopup.image && (
+              <div style={{ width: '100%', maxHeight: '200px', overflow: 'hidden', backgroundColor: '#F8F9FA' }}>
                 <img 
-                  src={landingSettings.popup.image} 
-                  alt="공지 이미지" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  src={curPopup.image} 
+                  alt={curPopup.title || "공지 이미지"} 
+                  style={{ width: '100%', height: '100%', maxHeight: '200px', objectFit: 'cover' }} 
                 />
               </div>
             )}
 
             {/* Content Area */}
-            <div style={{ padding: '24px', textAlign: 'center' }}>
+            <div style={{ padding: '22px 20px', textAlign: 'center' }}>
               <p style={{
                 fontSize: '14px',
                 color: 'var(--text-dark, #2B2A27)',
-                lineHeight: '1.6',
+                lineHeight: '1.65',
                 margin: 0,
                 whiteSpace: 'pre-wrap',
                 fontWeight: '500'
               }}>
-                {landingSettings.popup.content}
+                {curPopup.content}
               </p>
               
-              {landingSettings.popup.link && (
+              {(curPopup.linkUrl || curPopup.link) && (
                 <a 
-                  href={landingSettings.popup.link}
+                  href={curPopup.linkUrl || curPopup.link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-primary"
                   style={{
                     display: 'inline-flex',
-                    marginTop: '20px',
+                    marginTop: '18px',
                     width: '100%',
                     justifyContent: 'center',
-                    padding: '12px',
+                    padding: '11px',
                     borderRadius: '8px',
                     fontWeight: '700',
                     fontSize: '14px',
@@ -309,10 +420,34 @@ export default function Home() {
                     color: 'white'
                   }}
                 >
-                  자세히 보기 <ArrowRight size={16} style={{ marginLeft: '6px' }} />
+                  {curPopup.linkText || "자세히 보기"} <ArrowRight size={16} style={{ marginLeft: '6px' }} />
                 </a>
               )}
             </div>
+
+            {/* Carousel Dots if multiple */}
+            {activePopups.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', paddingBottom: '14px' }}>
+                {activePopups.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCurrentPopupIndex(idx)}
+                    style={{
+                      width: idx === safeIndex ? '16px' : '6px',
+                      height: '6px',
+                      borderRadius: '3px',
+                      backgroundColor: idx === safeIndex ? 'var(--primary-yuzu, #FFC72C)' : '#DDD',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    aria-label={`공지 ${idx + 1} 보기`}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Actions Bar */}
             <div style={{

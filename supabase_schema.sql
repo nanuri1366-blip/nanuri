@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.raw_materials (
     stock NUMERIC DEFAULT 0,
     unit TEXT NOT NULL,
     unit_price NUMERIC DEFAULT 0,
+    sort_order NUMERIC DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     name TEXT NOT NULL,
     stock NUMERIC DEFAULT 0,
     materials JSONB DEFAULT '[]'::jsonb,
+    sort_order NUMERIC DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -31,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.finished_goods (
     price NUMERIC DEFAULT 0,
     stock NUMERIC DEFAULT 0,
     composition JSONB DEFAULT '[]'::jsonb,
+    sort_order NUMERIC DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

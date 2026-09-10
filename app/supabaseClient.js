@@ -48,17 +48,19 @@ export const supabase = {
   async getRawMaterials() {
     try {
       if (!supabaseUrl || !supabaseKey) throw new Error('No Supabase credentials');
-      const res = await fetch(`${supabaseUrl}/rest/v1/raw_materials?select=*&order=created_at.asc`, { headers });
+      const res = await fetch(`${supabaseUrl}/rest/v1/raw_materials?select=*&order=sort_order.asc,created_at.asc`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
+        data.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
         setLocalItem('yuzu_raw_materials', data);
         return data;
       }
     } catch (e) {
       console.warn('Supabase getRawMaterials failed, using local store', e);
     }
-    return getLocalItem('yuzu_raw_materials', INITIAL_RAW_MATERIALS);
+    const local = getLocalItem('yuzu_raw_materials', INITIAL_RAW_MATERIALS);
+    return Array.isArray(local) ? [...local].sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)) : local;
   },
 
   async saveRawMaterials(materials) {
@@ -120,17 +122,19 @@ export const supabase = {
   async getProducts() {
     try {
       if (!supabaseUrl || !supabaseKey) throw new Error('No Supabase credentials');
-      const res = await fetch(`${supabaseUrl}/rest/v1/products?select=*&order=created_at.asc`, { headers });
+      const res = await fetch(`${supabaseUrl}/rest/v1/products?select=*&order=sort_order.asc,created_at.asc`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
+        data.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
         setLocalItem('yuzu_products', data);
         return data;
       }
     } catch (e) {
       console.warn('Supabase getProducts failed, using local store', e);
     }
-    return getLocalItem('yuzu_products', INITIAL_PRODUCTS);
+    const local = getLocalItem('yuzu_products', INITIAL_PRODUCTS);
+    return Array.isArray(local) ? [...local].sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)) : local;
   },
 
   async saveProducts(products) {
@@ -191,17 +195,49 @@ export const supabase = {
   async getFinishedGoods() {
     try {
       if (!supabaseUrl || !supabaseKey) throw new Error('No Supabase credentials');
-      const res = await fetch(`${supabaseUrl}/rest/v1/finished_goods?select=*&order=created_at.asc`, { headers });
+      const res = await fetch(`${supabaseUrl}/rest/v1/finished_goods?select=*&order=sort_order.asc,created_at.asc`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
+        data.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
         setLocalItem('yuzu_finished_goods', data);
         return data;
       }
     } catch (e) {
       console.warn('Supabase getFinishedGoods failed, using local store', e);
     }
-    return getLocalItem('yuzu_finished_goods', INITIAL_FINISHED_GOODS);
+    const local = getLocalItem('yuzu_finished_goods', INITIAL_FINISHED_GOODS);
+    return Array.isArray(local) ? [...local].sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)) : local;
+  },
+
+  async reorderItems(category, orderedList) {
+    const keyMap = {
+      raw_materials: 'yuzu_raw_materials',
+      products: 'yuzu_products',
+      finished_goods: 'yuzu_finished_goods'
+    };
+    const storageKey = keyMap[category] || `yuzu_${category}`;
+    const withOrder = orderedList.map((item, idx) => ({
+      ...item,
+      sort_order: idx + 1,
+      updated_at: new Date().toISOString()
+    }));
+    setLocalItem(storageKey, withOrder);
+
+    try {
+      if (!supabaseUrl || !supabaseKey) return true;
+      for (const item of withOrder) {
+        await fetch(`${supabaseUrl}/rest/v1/${category}?id=eq.${item.id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ sort_order: item.sort_order, updated_at: item.updated_at })
+        });
+      }
+      return true;
+    } catch (e) {
+      console.warn(`Supabase reorder ${category} failed`, e);
+      return true;
+    }
   },
 
   async saveFinishedGoods(goods) {

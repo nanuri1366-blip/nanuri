@@ -361,6 +361,51 @@
   }
 }
 
+@media (max-width: 768px) {
+  .producer-header {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .producer-main-grid {
+    padding: 14px 12px;
+    gap: 16px;
+  }
+  .producer-top-tabbar {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .producer-tabs-group {
+    width: 100%;
+    display: flex;
+    gap: 6px;
+  }
+  .producer-tab-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .producer-top-actions {
+    width: 100%;
+  }
+  .btn-producer-top-save {
+    width: 100%;
+    justify-content: center;
+  }
+  .producer-item-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .producer-adjust-group {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 /* Top Tab Bar & Batch Save */
 .producer-top-tabbar {
   display: flex;

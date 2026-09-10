@@ -27,18 +27,35 @@ import {
   Save,
   ArrowRight,
   Sliders,
-  DollarSign
+  DollarSign,
+  Download,
+  Calendar,
+  ChevronUp,
+  ChevronDown,
+  ExternalLink
 } from 'lucide-react';
 import './admin.css';
 
 // Default Landing Settings for fallback
 const defaultLandingSettings = {
+  popups: [
+    {
+      id: "popup_1",
+      enabled: false,
+      title: "공지사항",
+      content: "유자를 품은 오란다&까부리 홈페이지를 방문해 주셔서 감사합니다. 현재 단체 주문은 스마트스토어 또는 고객센터로 직접 문의 주시면 친절하게 안내해 드리겠습니다.",
+      image: "",
+      link: "https://smartstore.naver.com/kkaburioranda",
+      linkText: "자세히 보기"
+    }
+  ],
   popup: {
     enabled: false,
     title: "공지사항",
     content: "유자를 품은 오란다&까부리 홈페이지를 방문해 주셔서 감사합니다. 현재 단체 주문은 스마트스토어 또는 고객센터로 직접 문의 주시면 친절하게 안내해 드리겠습니다.",
     image: "",
-    link: "https://smartstore.naver.com/kkaburioranda"
+    link: "https://smartstore.naver.com/kkaburioranda",
+    linkText: "자세히 보기"
   },
   hero: {
     badge: "PREMIUM HANDMADE DESSERT",
@@ -61,15 +78,43 @@ const defaultLandingSettings = {
   },
   products: {
     deundeun: {
+      name: "[든든세트] 고흥 유자품은 까부리와 오란다",
+      desc: "오란다/까부리 선택식 (18개입). 넉넉하게 채워 온 가족이 함께 먹기 좋은 프리미엄 든든세트.",
+      originalPrice: 30600,
+      price: 27540,
+      unit: "(18개입 / 1박스)",
+      badge: "Best",
+      url: "https://smartstore.naver.com/kkaburioranda/products/12823083471",
       image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
     },
     silsok: {
+      name: "[실속세트] 고흥 유자품은 까부리와 오란다",
+      desc: "오란다/까부리 선택식 (12개입). 부담 없는 가격과 실속 있는 구성으로 간식용 선물로 가장 추천하는 세트.",
+      originalPrice: 20400,
+      price: 18360,
+      unit: "(12개입 / 1박스)",
+      badge: "추천",
+      url: "https://smartstore.naver.com/kkaburioranda/products/12823080166",
       image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
     },
     mini: {
+      name: "[미니세트] 고흥 유자품은 까부리와 오란다",
+      desc: "오란다/까부리 선택식 (6개입). 답례품 및 가벼운 체험용으로 안성맞춤인 미니 구성 세트.",
+      originalPrice: 10200,
+      price: 9180,
+      unit: "(6개입 / 1박스)",
+      badge: "인기",
+      url: "https://smartstore.naver.com/kkaburioranda/products/12823072673",
       image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
     },
     natgae: {
+      name: "[낱개] 고흥 유자품은 까부리와 오란다",
+      desc: "개별 시식용 오란다 / 까부리 낱개 구성. 가볍게 맛보고 싶을 때 추천하는 싱글 메뉴.",
+      originalPrice: 2200,
+      price: 2000,
+      unit: "(1개입)",
+      badge: "낱개",
+      url: "https://smartstore.naver.com/kkaburioranda/products/12701706707",
       image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
     }
   }
@@ -187,6 +232,11 @@ export default function AdminDashboard() {
   // 4.5 Inventory Log Modal
   const [logModal, setLogModal] = useState({ isOpen: false, data: null });
 
+  // 4.6 Order Date Range Filter State
+  const [orderDateRange, setOrderDateRange] = useState('all'); // 'all' | 'today' | '7d' | '30d' | 'custom'
+  const [orderStartDate, setOrderStartDate] = useState('');
+  const [orderEndDate, setOrderEndDate] = useState('');
+
   // 5. Pricing Calculator State
   const [calcSelectedGoodId, setCalcSelectedGoodId] = useState('');
   const [calcRecipeItems, setCalcRecipeItems] = useState([]);
@@ -211,15 +261,22 @@ export default function AdminDashboard() {
       setRawMaterials(matsList || []);
       setInventoryLogs(logsList || []);
       if (land) {
+        const mergedPopups = Array.isArray(land.popups) && land.popups.length > 0
+          ? land.popups
+          : (land.popup ? [{ id: 'popup_1', ...defaultLandingSettings.popups[0], ...land.popup }] : defaultLandingSettings.popups);
+
         setLandingSettings({
           ...defaultLandingSettings,
           ...land,
+          popups: mergedPopups,
           popup: { ...defaultLandingSettings.popup, ...(land.popup || {}) },
           hero: { ...defaultLandingSettings.hero, ...(land.hero || {}) },
           brandStory: { ...defaultLandingSettings.brandStory, ...(land.brandStory || {}) },
           products: {
-            ...defaultLandingSettings.products,
-            ...(land.products || {})
+            deundeun: { ...defaultLandingSettings.products.deundeun, ...(land.products?.deundeun || {}) },
+            silsok: { ...defaultLandingSettings.products.silsok, ...(land.products?.silsok || {}) },
+            mini: { ...defaultLandingSettings.products.mini, ...(land.products?.mini || {}) },
+            natgae: { ...defaultLandingSettings.products.natgae, ...(land.products?.natgae || {}) }
           }
         });
       }
@@ -233,6 +290,124 @@ export default function AdminDashboard() {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  // Reordering handler for raw materials, products, and finished goods
+  const handleMoveItem = async (category, index, direction) => {
+    let list, setList;
+    if (category === 'finished_goods') {
+      list = [...finishedGoods];
+      setList = setFinishedGoods;
+    } else if (category === 'products') {
+      list = [...products];
+      setList = setProducts;
+    } else if (category === 'raw_materials') {
+      list = [...rawMaterials];
+      setList = setRawMaterials;
+    } else {
+      return;
+    }
+
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+
+    setList(list);
+    await supabase.reorderItems(category, list);
+  };
+
+  // Filter orders by date range
+  const filteredOrdersByDate = useMemo(() => {
+    if (orderDateRange === 'all') return orders;
+    const now = new Date();
+
+    return orders.filter(ord => {
+      const dateStr = ord.order_date || ord.created_at;
+      if (!dateStr) return true;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return true;
+
+      if (orderDateRange === 'today') {
+        return d.toDateString() === now.toDateString();
+      }
+      if (orderDateRange === '7d') {
+        const diffDays = (now - d) / (1000 * 60 * 60 * 24);
+        return diffDays >= 0 && diffDays <= 7;
+      }
+      if (orderDateRange === '30d') {
+        const diffDays = (now - d) / (1000 * 60 * 60 * 24);
+        return diffDays >= 0 && diffDays <= 30;
+      }
+      if (orderDateRange === 'custom') {
+        if (orderStartDate) {
+          const start = new Date(orderStartDate + 'T00:00:00');
+          if (d < start) return false;
+        }
+        if (orderEndDate) {
+          const end = new Date(orderEndDate + 'T23:59:59');
+          if (d > end) return false;
+        }
+        return true;
+      }
+      return true;
+    });
+  }, [orders, orderDateRange, orderStartDate, orderEndDate]);
+
+  // Export orders to Excel (CSV with UTF-8 BOM)
+  const handleExportOrdersToExcel = (dataToExport) => {
+    if (!dataToExport || dataToExport.length === 0) {
+      alert('내보낼 주문 내역이 없습니다.');
+      return;
+    }
+
+    const headers = [
+      '주문일시',
+      '주문자명',
+      '연락처',
+      '주문상품',
+      '수량',
+      '주문단가(원)',
+      '합계금액(원)',
+      '진행상태',
+      '메모'
+    ];
+
+    const rows = dataToExport.map(ord => {
+      const good = finishedGoods.find(g => g.name === ord.product_name || g.id === ord.product_id);
+      const unitPrice = ord.unit_price !== undefined ? ord.unit_price : (good ? good.price : 0);
+      const totalPrice = ord.total_price !== undefined ? ord.total_price : (unitPrice * (ord.quantity || 1));
+
+      return [
+        formatDateTime(ord.order_date || ord.created_at),
+        ord.customer_name || '',
+        ord.phone || '',
+        ord.product_name || '',
+        ord.quantity || 1,
+        unitPrice,
+        totalPrice,
+        ord.status || '주문 접수',
+        (ord.memo || '').replace(/"/g, '""')
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(r => r.map(field => `"${field}"`).join(','))
+    ].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    link.href = url;
+    link.setAttribute('download', `유자오란다_주문내역_${todayStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   useEffect(() => {
@@ -522,7 +697,15 @@ export default function AdminDashboard() {
   // LANDING SETTINGS SAVE
   // --------------------------------------------------------------------------
   const handleSaveLanding = async () => {
-    await supabase.updateLandingSettings(landingSettings);
+    const primaryPopup = Array.isArray(landingSettings.popups) && landingSettings.popups.length > 0
+      ? landingSettings.popups[0]
+      : (landingSettings.popup || defaultLandingSettings.popup);
+
+    const payload = {
+      ...landingSettings,
+      popup: primaryPopup
+    };
+    await supabase.updateLandingSettings(payload);
     alert('랜딩페이지 설정이 저장되었습니다.');
   };
 
@@ -700,7 +883,7 @@ export default function AdminDashboard() {
           <DataTable
             title="주문 관리"
             subtitle="매장 및 현장에서 직접 접수된 완제품 주문을 등록하고 상태를 관리합니다."
-            data={orders}
+            data={filteredOrdersByDate}
             searchKeys={['customer_name', 'phone', 'product_name', 'memo']}
             searchPlaceholder="주문자명, 연락처, 상품명 검색..."
             filterKey="status"
@@ -721,6 +904,99 @@ export default function AdminDashboard() {
             addButtonText="현장 주문 등록"
             onRefresh={loadAll}
             isRefreshing={isRefreshing}
+            extraHeaderActions={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: '#FAF6EE',
+                  border: '1px solid #EAE8E3',
+                  borderRadius: '8px',
+                  padding: '3px',
+                  gap: '2px'
+                }}>
+                  {[
+                    { label: '전체', val: 'all' },
+                    { label: '오늘', val: 'today' },
+                    { label: '최근 7일', val: '7d' },
+                    { label: '최근 30일', val: '30d' },
+                    { label: '직접 지정', val: 'custom' }
+                  ].map(b => (
+                    <button
+                      key={b.val}
+                      type="button"
+                      onClick={() => setOrderDateRange(b.val)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        backgroundColor: orderDateRange === b.val ? '#2D6A4F' : 'transparent',
+                        color: orderDateRange === b.val ? '#FFFFFF' : '#6B6862',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+
+                {orderDateRange === 'custom' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input
+                      type="date"
+                      value={orderStartDate}
+                      onChange={(e) => setOrderStartDate(e.target.value)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #EAE8E3',
+                        fontSize: '12px',
+                        backgroundColor: '#FFFFFF'
+                      }}
+                    />
+                    <span style={{ fontSize: '12px', color: '#8C8983' }}>~</span>
+                    <input
+                      type="date"
+                      value={orderEndDate}
+                      onChange={(e) => setOrderEndDate(e.target.value)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #EAE8E3',
+                        fontSize: '12px',
+                        backgroundColor: '#FFFFFF'
+                      }}
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleExportOrdersToExcel(filteredOrdersByDate)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #2D6A4F',
+                    backgroundColor: '#FAFDFB',
+                    color: '#2D6A4F',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="현재 필터링된 주문 내역을 엑셀(CSV) 파일로 다운로드합니다"
+                >
+                  <Download size={15} />
+                  <span>엑셀 내보내기</span>
+                </button>
+              </div>
+            }
             columns={[
               {
                 key: 'order_date',
@@ -873,6 +1149,57 @@ export default function AdminDashboard() {
             isRefreshing={isRefreshing}
             columns={[
               {
+                key: '_order_move',
+                label: '순서',
+                width: '76px',
+                align: 'center',
+                render: (_, row) => {
+                  const idx = finishedGoods.findIndex(g => g.id === row.id);
+                  return (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMoveItem('finished_goods', idx, -1); }}
+                        disabled={idx <= 0}
+                        style={{
+                          border: '1px solid #D6D3CC',
+                          backgroundColor: idx <= 0 ? '#F5F4F0' : '#FFFFFF',
+                          color: idx <= 0 ? '#C0BDB7' : '#2B2A27',
+                          cursor: idx <= 0 ? 'not-allowed' : 'pointer',
+                          padding: '3px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          lineHeight: 1
+                        }}
+                        title="위로 이동"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMoveItem('finished_goods', idx, 1); }}
+                        disabled={idx >= finishedGoods.length - 1}
+                        style={{
+                          border: '1px solid #D6D3CC',
+                          backgroundColor: idx >= finishedGoods.length - 1 ? '#F5F4F0' : '#FFFFFF',
+                          color: idx >= finishedGoods.length - 1 ? '#C0BDB7' : '#2B2A27',
+                          cursor: idx >= finishedGoods.length - 1 ? 'not-allowed' : 'pointer',
+                          padding: '3px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          lineHeight: 1
+                        }}
+                        title="아래로 이동"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  );
+                }
+              },
+              {
                 key: 'name',
                 label: '세트 상품명',
                 render: (val, row) => (
@@ -964,6 +1291,57 @@ export default function AdminDashboard() {
             isRefreshing={isRefreshing}
             columns={[
               {
+                key: '_order_move',
+                label: '순서',
+                width: '76px',
+                align: 'center',
+                render: (_, row) => {
+                  const idx = products.findIndex(p => p.id === row.id);
+                  return (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMoveItem('products', idx, -1); }}
+                        disabled={idx <= 0}
+                        style={{
+                          border: '1px solid #D6D3CC',
+                          backgroundColor: idx <= 0 ? '#F5F4F0' : '#FFFFFF',
+                          color: idx <= 0 ? '#C0BDB7' : '#2B2A27',
+                          cursor: idx <= 0 ? 'not-allowed' : 'pointer',
+                          padding: '3px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          lineHeight: 1
+                        }}
+                        title="위로 이동"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMoveItem('products', idx, 1); }}
+                        disabled={idx >= products.length - 1}
+                        style={{
+                          border: '1px solid #D6D3CC',
+                          backgroundColor: idx >= products.length - 1 ? '#F5F4F0' : '#FFFFFF',
+                          color: idx >= products.length - 1 ? '#C0BDB7' : '#2B2A27',
+                          cursor: idx >= products.length - 1 ? 'not-allowed' : 'pointer',
+                          padding: '3px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          lineHeight: 1
+                        }}
+                        title="아래로 이동"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  );
+                }
+              },
+              {
                 key: 'name',
                 label: '상품명',
                 render: (val) => <strong style={{ fontSize: '15px', color: '#2B2A27' }}>{val}</strong>
@@ -1040,6 +1418,57 @@ export default function AdminDashboard() {
             onRefresh={loadAll}
             isRefreshing={isRefreshing}
             columns={[
+              {
+                key: '_order_move',
+                label: '순서',
+                width: '76px',
+                align: 'center',
+                render: (_, row) => {
+                  const idx = rawMaterials.findIndex(m => m.id === row.id);
+                  return (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMoveItem('raw_materials', idx, -1); }}
+                        disabled={idx <= 0}
+                        style={{
+                          border: '1px solid #D6D3CC',
+                          backgroundColor: idx <= 0 ? '#F5F4F0' : '#FFFFFF',
+                          color: idx <= 0 ? '#C0BDB7' : '#2B2A27',
+                          cursor: idx <= 0 ? 'not-allowed' : 'pointer',
+                          padding: '3px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          lineHeight: 1
+                        }}
+                        title="위로 이동"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMoveItem('raw_materials', idx, 1); }}
+                        disabled={idx >= rawMaterials.length - 1}
+                        style={{
+                          border: '1px solid #D6D3CC',
+                          backgroundColor: idx >= rawMaterials.length - 1 ? '#F5F4F0' : '#FFFFFF',
+                          color: idx >= rawMaterials.length - 1 ? '#C0BDB7' : '#2B2A27',
+                          cursor: idx >= rawMaterials.length - 1 ? 'not-allowed' : 'pointer',
+                          padding: '3px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          lineHeight: 1
+                        }}
+                        title="아래로 이동"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  );
+                }
+              },
               {
                 key: 'name',
                 label: '원재료명',
@@ -1409,79 +1838,302 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            {/* Popup Settings */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <strong style={{ fontSize: '16px' }}>1. 공지사항 팝업 설정</strong>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}>
-                  <input
-                    type="checkbox"
-                    checked={landingSettings.popup?.enabled || false}
-                    onChange={(e) => setLandingSettings(prev => ({
+            {/* Section 1: Multi-Popup Settings */}
+            <div style={{ border: '1px solid #EAE8E3', borderRadius: '14px', padding: '22px', marginBottom: '22px', backgroundColor: '#FFFFFF' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <strong style={{ fontSize: '17px', color: '#2B2A27' }}>1. 공지사항 팝업 관리 (다중 팝업 지원)</strong>
+                  <p style={{ fontSize: '13px', color: '#6B6862', margin: '4px 0 0 0' }}>
+                    여러 개의 팝업을 등록할 수 있으며, 활성화된 팝업들은 메인 랜딩에서 슬라이더(캐러셀)로 넘겨볼 수 있습니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLandingSettings(prev => {
+                    const currentPopups = Array.isArray(prev.popups) && prev.popups.length > 0
+                      ? prev.popups
+                      : (prev.popup ? [{ id: 'popup_1', ...defaultLandingSettings.popups[0], ...prev.popup }] : defaultLandingSettings.popups);
+                    return {
                       ...prev,
-                      popup: { ...prev.popup, enabled: e.target.checked }
-                    }))}
-                  />
-                  <span>공지 팝업 활성화</span>
-                </label>
+                      popups: [
+                        ...currentPopups,
+                        {
+                          id: `popup_${Date.now()}`,
+                          enabled: true,
+                          title: '새 공지사항',
+                          content: '공지 내용을 입력하세요.',
+                          image: '',
+                          link: 'https://smartstore.naver.com/kkaburioranda',
+                          linkText: '자세히 보기'
+                        }
+                      ]
+                    };
+                  })}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #2D6A4F',
+                    backgroundColor: '#FAFDFB',
+                    color: '#2D6A4F',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Plus size={15} /> <span>새 팝업 추가</span>
+                </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>팝업 제목</label>
-                  <input
-                    type="text"
-                    value={landingSettings.popup?.title || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      popup: { ...prev.popup, title: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>공지 본문 내용</label>
-                  <textarea
-                    rows={3}
-                    value={landingSettings.popup?.content || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      popup: { ...prev.popup, content: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
-                  />
-                </div>
+              {/* Popups List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {(() => {
+                  const popupsList = Array.isArray(landingSettings.popups) && landingSettings.popups.length > 0
+                    ? landingSettings.popups
+                    : (landingSettings.popup ? [{ id: 'popup_1', ...defaultLandingSettings.popups[0], ...landingSettings.popup }] : defaultLandingSettings.popups);
 
-                <ImageFieldEditor
-                  label="공지 팝업 첨부 이미지 (선택)"
-                  value={landingSettings.popup?.image || ''}
-                  onChange={(img) => setLandingSettings(prev => ({
-                    ...prev,
-                    popup: { ...prev.popup, image: img }
-                  }))}
-                  placeholder="공지 이미지 URL 또는 PC 사진 업로드"
-                />
+                  return popupsList.map((pop, pIdx) => (
+                    <div 
+                      key={pop.id || pIdx} 
+                      style={{ 
+                        border: '1px solid #EAE8E3', 
+                        borderRadius: '10px', 
+                        padding: '16px', 
+                        backgroundColor: '#FAF9F6' 
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ 
+                            backgroundColor: '#2D6A4F', 
+                            color: '#FFFFFF', 
+                            fontWeight: '800', 
+                            fontSize: '12px', 
+                            padding: '2px 8px', 
+                            borderRadius: '12px' 
+                          }}>
+                            팝업 #{pIdx + 1}
+                          </span>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>
+                            <input
+                              type="checkbox"
+                              checked={pop.enabled || false}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setLandingSettings(prev => {
+                                  const list = Array.isArray(prev.popups) && prev.popups.length > 0
+                                    ? [...prev.popups]
+                                    : (prev.popup ? [{ id: 'popup_1', ...defaultLandingSettings.popups[0], ...prev.popup }] : [...defaultLandingSettings.popups]);
+                                  list[pIdx] = { ...list[pIdx], enabled: checked };
+                                  return { ...prev, popups: list, popup: list[0] };
+                                });
+                              }}
+                            />
+                            <span>팝업 노출 활성화</span>
+                          </label>
+                        </div>
+
+                        {popupsList.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!confirm(`팝업 #${pIdx + 1}을(를) 삭제하시겠습니까?`)) return;
+                              setLandingSettings(prev => {
+                                const list = (prev.popups || []).filter((_, idx) => idx !== pIdx);
+                                return { ...prev, popups: list, popup: list[0] || defaultLandingSettings.popup };
+                              });
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#C0392B', cursor: 'pointer', padding: '4px' }}
+                            title="팝업 삭제"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                            팝업 제목
+                          </label>
+                          <input
+                            type="text"
+                            value={pop.title || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setLandingSettings(prev => {
+                                const list = [...(prev.popups || popupsList)];
+                                list[pIdx] = { ...list[pIdx], title: val };
+                                return { ...prev, popups: list, popup: list[0] };
+                              });
+                            }}
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                            자세히 보기 링크 URL (선택)
+                          </label>
+                          <input
+                            type="text"
+                            value={pop.link || ''}
+                            placeholder="https://smartstore.naver.com/..."
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setLandingSettings(prev => {
+                                const list = [...(prev.popups || popupsList)];
+                                list[pIdx] = { ...list[pIdx], link: val };
+                                return { ...prev, popups: list, popup: list[0] };
+                              });
+                            }}
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                            링크 버튼 문구
+                          </label>
+                          <input
+                            type="text"
+                            value={pop.linkText || '자세히 보기'}
+                            placeholder="자세히 보기"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setLandingSettings(prev => {
+                                const list = [...(prev.popups || popupsList)];
+                                list[pIdx] = { ...list[pIdx], linkText: val };
+                                return { ...prev, popups: list, popup: list[0] };
+                              });
+                            }}
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                          공지 본문 내용
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pop.content || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setLandingSettings(prev => {
+                              const list = [...(prev.popups || popupsList)];
+                              list[pIdx] = { ...list[pIdx], content: val };
+                              return { ...prev, popups: list, popup: list[0] };
+                            });
+                          }}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                        />
+                      </div>
+
+                      <ImageFieldEditor
+                        label={`팝업 #${pIdx + 1} 첨부 이미지 (선택)`}
+                        value={pop.image || ''}
+                        onChange={(img) => {
+                          setLandingSettings(prev => {
+                            const list = [...(prev.popups || popupsList)];
+                            list[pIdx] = { ...list[pIdx], image: img };
+                            return { ...prev, popups: list, popup: list[0] };
+                          });
+                        }}
+                        placeholder="공지 이미지 URL 또는 PC 사진 업로드"
+                      />
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
 
-            {/* Hero Copy & Image Settings */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-              <strong style={{ fontSize: '16px', display: 'block', marginBottom: '14px' }}>2. 메인 배너 (Hero Section) 설정</strong>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Section 2: Hero Copy, Links & Image Settings */}
+            <div style={{ border: '1px solid #EAE8E3', borderRadius: '14px', padding: '22px', marginBottom: '22px', backgroundColor: '#FFFFFF' }}>
+              <strong style={{ fontSize: '17px', color: '#2B2A27', display: 'block', marginBottom: '14px' }}>
+                2. 메인 배너 (Hero Section) 설정
+              </strong>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>메인 타이틀</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    상단 배지 문구
+                  </label>
                   <input
                     type="text"
+                    value={landingSettings.hero?.badge || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      hero: { ...prev.hero, badge: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    구매 버튼 문구
+                  </label>
+                  <input
+                    type="text"
+                    value={landingSettings.hero?.ctaText || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      hero: { ...prev.hero, ctaText: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    구매 버튼 링크 URL
+                  </label>
+                  <input
+                    type="text"
+                    value={landingSettings.hero?.ctaLink || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      hero: { ...prev.hero, ctaLink: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    스토리 링크 문구
+                  </label>
+                  <input
+                    type="text"
+                    value={landingSettings.hero?.storyLinkText || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      hero: { ...prev.hero, storyLinkText: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    메인 타이틀
+                  </label>
+                  <textarea
+                    rows={2}
                     value={landingSettings.hero?.title || ''}
                     onChange={(e) => setLandingSettings(prev => ({
                       ...prev,
                       hero: { ...prev.hero, title: e.target.value }
                     }))}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>서브 타이틀 설명</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    서브 타이틀 설명
+                  </label>
                   <textarea
                     rows={2}
                     value={landingSettings.hero?.subtitle || ''}
@@ -1489,117 +2141,356 @@ export default function AdminDashboard() {
                       ...prev,
                       hero: { ...prev.hero, subtitle: e.target.value }
                     }))}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EAE8E3' }}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
                   />
                 </div>
-
-                <ImageFieldEditor
-                  label="메인 히어로 대표 사진"
-                  value={landingSettings.hero?.image || 'images/yuzu_oranda_hero.png'}
-                  onChange={(img) => setLandingSettings(prev => ({
-                    ...prev,
-                    hero: { ...prev.hero, image: img }
-                  }))}
-                  placeholder="메인 비주얼 이미지 URL 또는 PC 사진 업로드"
-                />
               </div>
+
+              <ImageFieldEditor
+                label="메인 히어로 대표 사진"
+                value={landingSettings.hero?.image || 'images/yuzu_oranda_hero.png'}
+                onChange={(img) => setLandingSettings(prev => ({
+                  ...prev,
+                  hero: { ...prev.hero, image: img }
+                }))}
+                placeholder="메인 비주얼 이미지 URL 또는 PC 사진 업로드"
+              />
             </div>
 
-            {/* Brand Story Image Settings */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-              <strong style={{ fontSize: '16px', display: 'block', marginBottom: '14px' }}>3. 브랜드 스토리 대표 사진 설정</strong>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <ImageFieldEditor
-                  label="브랜드 스토리 소개 사진 (제조 과정 및 제품 연출컷)"
-                  value={landingSettings.brandStory?.image || 'images/yuzu_classic_oranda.png'}
-                  onChange={(img) => setLandingSettings(prev => ({
-                    ...prev,
-                    brandStory: { ...prev.brandStory, image: img }
-                  }))}
-                  placeholder="스토리 이미지 URL 또는 PC 사진 업로드"
-                />
+            {/* Section 3: Brand Story Copy & Image Settings */}
+            <div style={{ border: '1px solid #EAE8E3', borderRadius: '14px', padding: '22px', marginBottom: '22px', backgroundColor: '#FFFFFF' }}>
+              <strong style={{ fontSize: '17px', color: '#2B2A27', display: 'block', marginBottom: '14px' }}>
+                3. 브랜드 스토리 (Brand Story) 설정
+              </strong>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    서브타이틀
+                  </label>
+                  <input
+                    type="text"
+                    value={landingSettings.brandStory?.subtitle || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      brandStory: { ...prev.brandStory, subtitle: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    강조 특장점 배지 문구
+                  </label>
+                  <input
+                    type="text"
+                    value={landingSettings.brandStory?.featureBadge || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      brandStory: { ...prev.brandStory, featureBadge: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    강조 특장점 설명
+                  </label>
+                  <input
+                    type="text"
+                    value={landingSettings.brandStory?.featureDesc || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      brandStory: { ...prev.brandStory, featureDesc: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
               </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    메인 타이틀
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={landingSettings.brandStory?.title || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      brandStory: { ...prev.brandStory, title: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    스토리 소제목
+                  </label>
+                  <input
+                    type="text"
+                    value={landingSettings.brandStory?.sectionTitle || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      brandStory: { ...prev.brandStory, sectionTitle: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    스토리 본문 단락 1
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={landingSettings.brandStory?.body1 || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      brandStory: { ...prev.brandStory, body1: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
+                    스토리 본문 단락 2
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={landingSettings.brandStory?.body2 || ''}
+                    onChange={(e) => setLandingSettings(prev => ({
+                      ...prev,
+                      brandStory: { ...prev.brandStory, body2: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <ImageFieldEditor
+                label="브랜드 스토리 소개 사진 (제조 과정 및 제품 연출컷)"
+                value={landingSettings.brandStory?.image || 'images/yuzu_classic_oranda.png'}
+                onChange={(img) => setLandingSettings(prev => ({
+                  ...prev,
+                  brandStory: { ...prev.brandStory, image: img }
+                }))}
+                placeholder="스토리 이미지 URL 또는 PC 사진 업로드"
+              />
             </div>
 
-            {/* Product Lineup Photos Settings */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '12px', padding: '20px' }}>
-              <strong style={{ fontSize: '16px', display: 'block', marginBottom: '6px' }}>4. 제품 소개 라인업 사진 설정 (4종 세트)</strong>
-              <p style={{ fontSize: '13px', color: '#6B6862', margin: '0 0 16px 0' }}>
-                메인 랜딩페이지의 각 완제품 세트 카드에 노출되는 사진을 교체합니다.
+            {/* Section 4: 4-Product Lineup Full Settings (Name, Desc, Original Price, Sale Price, Unit, Badge, URL, Photo) */}
+            <div style={{ border: '1px solid #EAE8E3', borderRadius: '14px', padding: '22px', backgroundColor: '#FFFFFF' }}>
+              <strong style={{ fontSize: '17px', color: '#2B2A27', display: 'block', marginBottom: '4px' }}>
+                4. 제품 소개 라인업 설정 (가격, 할인, 텍스트, 링크, 사진 전체)
+              </strong>
+              <p style={{ fontSize: '13px', color: '#6B6862', margin: '0 0 18px 0' }}>
+                메인 랜딩페이지의 4종 세트 상품 카드에 노출되는 모든 가격, 할인율, 텍스트, 구매 링크, 사진을 직접 변경합니다.
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-                <div style={{ border: '1px solid #F0EEE9', padding: '14px', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
-                  <ImageFieldEditor
-                    label="[든든세트] 사진 (18개입)"
-                    value={landingSettings.products?.deundeun?.image || defaultLandingSettings.products.deundeun.image}
-                    onChange={(img) => setLandingSettings(prev => ({
-                      ...prev,
-                      products: {
-                        ...defaultLandingSettings.products,
-                        ...(prev.products || {}),
-                        deundeun: {
-                          ...(prev.products?.deundeun || defaultLandingSettings.products.deundeun || {}),
-                          image: img
-                        }
-                      }
-                    }))}
-                  />
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
+                {[
+                  { key: 'deundeun', label: '1. [든든세트] (18개입)' },
+                  { key: 'silsok', label: '2. [실속세트] (12개입)' },
+                  { key: 'mini', label: '3. [미니세트] (6개입)' },
+                  { key: 'natgae', label: '4. [낱개] (1개입)' }
+                ].map(({ key, label }) => {
+                  const prod = landingSettings.products?.[key] || defaultLandingSettings.products[key] || {};
+                  const origPrice = Number(prod.originalPrice) || 0;
+                  const price = Number(prod.price) || 0;
+                  const discount = origPrice > price ? Math.round((origPrice - price) / origPrice * 100) : 0;
 
-                <div style={{ border: '1px solid #F0EEE9', padding: '14px', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
-                  <ImageFieldEditor
-                    label="[실속세트] 사진 (12개입)"
-                    value={landingSettings.products?.silsok?.image || defaultLandingSettings.products.silsok.image}
-                    onChange={(img) => setLandingSettings(prev => ({
-                      ...prev,
-                      products: {
-                        ...defaultLandingSettings.products,
-                        ...(prev.products || {}),
-                        silsok: {
-                          ...(prev.products?.silsok || defaultLandingSettings.products.silsok || {}),
-                          image: img
-                        }
-                      }
-                    }))}
-                  />
-                </div>
+                  return (
+                    <div 
+                      key={key} 
+                      style={{ 
+                        border: '1px solid #EAE8E3', 
+                        borderRadius: '12px', 
+                        padding: '16px', 
+                        backgroundColor: '#FAF9F6' 
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <strong style={{ fontSize: '15px', color: '#2B2A27' }}>{label}</strong>
+                        {discount > 0 ? (
+                          <span style={{ backgroundColor: '#D8F3DC', color: '#2D6A4F', fontSize: '12px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>
+                            -{discount}% 할인 적용중
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#8C8983' }}>할인 없음</span>
+                        )}
+                      </div>
 
-                <div style={{ border: '1px solid #F0EEE9', padding: '14px', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
-                  <ImageFieldEditor
-                    label="[미니세트] 사진 (6개입)"
-                    value={landingSettings.products?.mini?.image || defaultLandingSettings.products.mini.image}
-                    onChange={(img) => setLandingSettings(prev => ({
-                      ...prev,
-                      products: {
-                        ...defaultLandingSettings.products,
-                        ...(prev.products || {}),
-                        mini: {
-                          ...(prev.products?.mini || defaultLandingSettings.products.mini || {}),
-                          image: img
-                        }
-                      }
-                    }))}
-                  />
-                </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
+                            상품명
+                          </label>
+                          <input
+                            type="text"
+                            value={prod.name || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setLandingSettings(prev => ({
+                                ...prev,
+                                products: {
+                                  ...prev.products,
+                                  [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), name: val }
+                                }
+                              }));
+                            }}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                          />
+                        </div>
 
-                <div style={{ border: '1px solid #F0EEE9', padding: '14px', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
-                  <ImageFieldEditor
-                    label="[낱개] 사진 (1개입)"
-                    value={landingSettings.products?.natgae?.image || defaultLandingSettings.products.natgae.image}
-                    onChange={(img) => setLandingSettings(prev => ({
-                      ...prev,
-                      products: {
-                        ...defaultLandingSettings.products,
-                        ...(prev.products || {}),
-                        natgae: {
-                          ...(prev.products?.natgae || defaultLandingSettings.products.natgae || {}),
-                          image: img
-                        }
-                      }
-                    }))}
-                  />
-                </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
+                            상품 설명
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={prod.desc || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setLandingSettings(prev => ({
+                                ...prev,
+                                products: {
+                                  ...prev.products,
+                                  [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), desc: val }
+                                }
+                              }));
+                            }}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                          />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
+                              정가 (원)
+                            </label>
+                            <input
+                              type="number"
+                              value={prod.originalPrice !== undefined ? prod.originalPrice : 0}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setLandingSettings(prev => ({
+                                  ...prev,
+                                  products: {
+                                    ...prev.products,
+                                    [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), originalPrice: val }
+                                  }
+                                }));
+                              }}
+                              style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
+                              판매가 (원)
+                            </label>
+                            <input
+                              type="number"
+                              value={prod.price !== undefined ? prod.price : 0}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setLandingSettings(prev => ({
+                                  ...prev,
+                                  products: {
+                                    ...prev.products,
+                                    [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), price: val }
+                                  }
+                                }));
+                              }}
+                              style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
+                              구성 단위 문구
+                            </label>
+                            <input
+                              type="text"
+                              value={prod.unit || ''}
+                              placeholder="(18개입 / 1박스)"
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setLandingSettings(prev => ({
+                                  ...prev,
+                                  products: {
+                                    ...prev.products,
+                                    [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), unit: val }
+                                  }
+                                }));
+                              }}
+                              style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
+                              배지 문구 (예: Best, 추천)
+                            </label>
+                            <input
+                              type="text"
+                              value={prod.badge || ''}
+                              placeholder="Best, 추천, 인기"
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setLandingSettings(prev => ({
+                                  ...prev,
+                                  products: {
+                                    ...prev.products,
+                                    [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), badge: val }
+                                  }
+                                }));
+                              }}
+                              style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
+                            스마트스토어 구매 링크 URL
+                          </label>
+                          <input
+                            type="text"
+                            value={prod.url || ''}
+                            placeholder="https://smartstore.naver.com/..."
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setLandingSettings(prev => ({
+                                ...prev,
+                                products: {
+                                  ...prev.products,
+                                  [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), url: val }
+                                }
+                              }));
+                            }}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                          />
+                        </div>
+
+                        <ImageFieldEditor
+                          label="상품 사진"
+                          value={prod.image || defaultLandingSettings.products[key].image}
+                          onChange={(img) => {
+                            setLandingSettings(prev => ({
+                              ...prev,
+                              products: {
+                                ...prev.products,
+                                [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), image: img }
+                              }
+                            }));
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
