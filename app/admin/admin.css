@@ -1934,6 +1934,7 @@ input:checked + .slider:before {
     outline: 1.5px dashed transparent;
     transition: all 0.15s ease;
     border-radius: 4px;
+    cursor: pointer !important;
 }
 
 .el-hover-target:hover {

@@ -58,6 +58,8 @@ import {
   Send,
   Image as ImageIcon,
   FileText,
+  Instagram,
+  Facebook,
   X
 } from 'lucide-react';
 import './admin.css';
@@ -210,6 +212,16 @@ export default function AdminDashboard() {
   const [previewDevice, setPreviewDevice] = useState('desktop'); // 'desktop' | 'tablet' | 'mobile'
   const [editingModal, setEditingModal] = useState({ isOpen: false, type: null, targetId: null, data: null });
   const [sectionListModalOpen, setSectionListModalOpen] = useState(false);
+  const [targetElementModal, setTargetElementModal] = useState({
+    isOpen: false,
+    title: '',
+    desc: '',
+    sectionId: null,
+    field: '',
+    cardIndex: null,
+    type: 'text', // 'text' | 'textarea' | 'image' | 'link' | 'product-card' | 'review-card' | 'feature-card'
+    value: null
+  });
 
   // 4. Modal States
   // 4.1 Order Modal
@@ -502,6 +514,112 @@ export default function AdminDashboard() {
       });
       return { ...prev, sections };
     });
+  };
+
+  // Targeted Element-Specific Modal Handlers
+  const openElementModal = (config) => {
+    setTargetElementModal({
+      isOpen: true,
+      title: config.title || '요소 수정',
+      desc: config.desc || '',
+      sectionId: config.sectionId || null,
+      field: config.field || '',
+      cardIndex: config.cardIndex !== undefined ? config.cardIndex : null,
+      type: config.type || 'text',
+      value: config.value !== undefined ? JSON.parse(JSON.stringify(config.value)) : ''
+    });
+  };
+
+  const handleSaveElementModal = () => {
+    const { sectionId, field, cardIndex, type, value } = targetElementModal;
+    if (!sectionId && !field) {
+      setTargetElementModal(prev => ({ ...prev, isOpen: false }));
+      return;
+    }
+
+    setLandingSettings(prev => {
+      // 1. Header direct field or link
+      if (sectionId === 'header') {
+        if (type === 'link' && typeof value === 'object' && value !== null) {
+          return {
+            ...prev,
+            header: {
+              ...(prev.header || {}),
+              ...value
+            }
+          };
+        }
+        return {
+          ...prev,
+          header: {
+            ...(prev.header || {}),
+            [field]: value
+          }
+        };
+      }
+
+      // 2. Footer direct field
+      if (sectionId === 'footer') {
+        const currentFooter = prev.footer || {};
+        const currentComp = currentFooter.companyInfo || {};
+        if (['companyName', 'representative', 'bizNumber', 'orderReport', 'address', 'phone', 'email', 'copyright'].includes(field)) {
+          return {
+            ...prev,
+            footer: {
+              ...currentFooter,
+              companyInfo: {
+                ...currentComp,
+                [field]: value
+              }
+            }
+          };
+        }
+        return {
+          ...prev,
+          footer: {
+            ...currentFooter,
+            [field]: value
+          }
+        };
+      }
+
+      // 3. Dynamic Section direct field or card item
+      const sections = (prev.sections || []).map(sec => {
+        if (sec.id !== sectionId) return sec;
+        const currentData = { ...(sec.data || {}) };
+
+        // Card Item Edit (Lineup, Reviews, Features)
+        if (field === 'items' && cardIndex !== null && cardIndex !== undefined) {
+          const items = [...(currentData.items || [])];
+          items[cardIndex] = value;
+          return { ...sec, data: { ...currentData, items } };
+        }
+
+        // Button/Link combo edit (e.g. ctaText + ctaLink)
+        if (type === 'link' && typeof value === 'object' && value !== null) {
+          return {
+            ...sec,
+            data: {
+              ...currentData,
+              ...value
+            }
+          };
+        }
+
+        // Single field edit (badge, title, subtitle, image, etc.)
+        return {
+          ...sec,
+          data: {
+            ...currentData,
+            [field]: value
+          }
+        };
+      });
+
+      return { ...prev, sections };
+    });
+
+    setTargetElementModal(prev => ({ ...prev, isOpen: false }));
   };
 
   const handleOpenEditModal = (type, targetId = null, initialData = null) => {
@@ -2072,20 +2190,10 @@ export default function AdminDashboard() {
             <div className="editor-canvas-stage">
               <div className={`preview-frame ${previewDevice}`}>
                 
-                {/* 2.1 Live GNB Header */}
-                <div 
-                  className="canvas-section-box"
-                  style={{
-                    padding: '16px 24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderBottom: '1px solid #EAE8E3',
-                    backgroundColor: '#FFFFFF'
-                  }}
-                >
+                {/* 2.1 Live GNB Header (100% Matching app/page.js) */}
+                <div className="canvas-section-box" style={{ position: 'relative' }}>
                   <div className="section-floating-tag">
-                    <span>헤더 및 상단 메뉴</span>
+                    <span>상단 헤더 & GNB</span>
                   </div>
 
                   <div className="section-floating-toolbar">
@@ -2093,62 +2201,83 @@ export default function AdminDashboard() {
                       type="button"
                       className="sec-tool-btn primary"
                       onClick={() => handleOpenEditModal('header')}
-                      title="헤더 로고 및 GNB 메뉴 수정"
+                      title="헤더 로고 및 GNB 메뉴 종합 설정"
                     >
-                      <Settings size={12} /> <span>헤더 설정</span>
+                      <Settings size={12} /> <span>헤더 종합 설정</span>
                     </button>
                   </div>
 
-                  {/* Logo */}
-                  <div 
-                    onClick={() => handleOpenEditModal('header')}
-                    className="el-hover-target"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px', cursor: 'pointer' }}
-                  >
-                    <span style={{ fontSize: '19px', fontWeight: '900', color: '#E8A317' }}>
-                      {landingSettings.header?.logoTextEn || 'Yuzu'}
-                    </span>
-                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#2B2A27' }}>
-                      {landingSettings.header?.logoTextKo || '유자품은 오란다&까부리'}
-                    </span>
-                  </div>
-
-                  {/* Nav links & CTA button */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <nav style={{ display: previewDevice === 'mobile' ? 'none' : 'flex', alignItems: 'center', gap: '14px', fontSize: '13px', color: '#6B6862' }}>
-                      {(landingSettings.sections || []).filter(s => s.enabled && s.showInNav).map(s => (
+                  <header className="main-header" style={{ position: 'relative', top: 0, boxShadow: 'none' }}>
+                    <div className="container header-container">
+                      <a href="#" className="logo" onClick={(e) => e.preventDefault()}>
                         <span 
-                          key={s.id} 
-                          onClick={() => handleOpenEditModal(s.type, s.id)}
-                          style={{ cursor: 'pointer', fontWeight: '600' }}
-                          title="클릭하여 해당 섹션 설정"
+                          className="brand-en el-hover-target"
+                          title="클릭하여 영문 로고 수정"
+                          onClick={() => openElementModal({
+                            title: '상단 영문 로고 수정',
+                            desc: '헤더 좌측에 표시되는 영문 브랜드명입니다.',
+                            sectionId: 'header',
+                            field: 'logoTextEn',
+                            type: 'text',
+                            value: landingSettings.header?.logoTextEn || 'Yuzu'
+                          })}
                         >
-                          {s.navLabel || s.name}
+                          {landingSettings.header?.logoTextEn || 'Yuzu'}
                         </span>
-                      ))}
-                    </nav>
+                        <span 
+                          className="brand-ko el-hover-target"
+                          title="클릭하여 한글 상호 수정"
+                          onClick={() => openElementModal({
+                            title: '상단 한글 상호 수정',
+                            desc: '헤더 좌측에 표시되는 한글 브랜드 상호입니다.',
+                            sectionId: 'header',
+                            field: 'logoTextKo',
+                            type: 'text',
+                            value: landingSettings.header?.logoTextKo || '유자품은 오란다&까부리'
+                          })}
+                        >
+                          {landingSettings.header?.logoTextKo || '유자품은 오란다&까부리'}
+                        </span>
+                      </a>
 
-                    {landingSettings.header?.showSmartStoreBtn !== false && (
-                      <span 
-                        onClick={() => handleOpenEditModal('header')}
-                        className="el-hover-target"
-                        style={{
-                          backgroundColor: '#2D6A4F',
-                          color: '#FFFFFF',
-                          padding: '6px 14px',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {landingSettings.header?.smartStoreText || '구매하기'}
-                      </span>
-                    )}
-                  </div>
+                      <nav className="nav-menu" style={{ display: previewDevice === 'mobile' ? 'none' : 'flex' }}>
+                        {(landingSettings.sections || []).filter(s => s.enabled && s.showInNav).map(s => (
+                          <span 
+                            key={s.id} 
+                            className="nav-link" 
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => handleOpenEditModal(s.type, s.id)}
+                            title="클릭하여 해당 섹션 종합 설정"
+                          >
+                            {s.navLabel || s.name}
+                          </span>
+                        ))}
+
+                        {landingSettings.header?.showSmartStoreBtn !== false && (
+                          <span 
+                            className="nav-btn el-hover-target" 
+                            style={{ cursor: 'pointer' }}
+                            title="클릭하여 구매 버튼 문구 및 URL 수정"
+                            onClick={() => openElementModal({
+                              title: '상단 구매 버튼 설정',
+                              desc: '헤더 우측 바로가기 버튼 문구와 이동 URL을 설정합니다.',
+                              sectionId: 'header',
+                              type: 'link',
+                              value: {
+                                smartStoreText: landingSettings.header?.smartStoreText || '스마트스토어로 구매하기',
+                                smartStoreUrl: landingSettings.header?.smartStoreUrl || 'https://smartstore.naver.com/kkaburioranda'
+                              }
+                            })}
+                          >
+                            {landingSettings.header?.smartStoreText || '스마트스토어로 구매하기'}
+                          </span>
+                        )}
+                      </nav>
+                    </div>
+                  </header>
                 </div>
 
-                {/* 2.2 Dynamic Sections */}
+                {/* 2.2 Dynamic Sections (100% Matching app/page.js Markup & Classes) */}
                 {(landingSettings.sections || []).map((sec, idx) => {
                   if (!sec.enabled) return null;
                   const data = sec.data || {};
@@ -2157,7 +2286,7 @@ export default function AdminDashboard() {
                     <div 
                       key={sec.id} 
                       className="canvas-section-box"
-                      style={{ borderBottom: '1px solid #EAE8E3' }}
+                      style={{ position: 'relative' }}
                     >
                       {/* Floating Section Tag */}
                       <div className="section-floating-tag">
@@ -2165,7 +2294,7 @@ export default function AdminDashboard() {
                         <span style={{ opacity: 0.65 }}>#{sec.anchor || sec.id}</span>
                       </div>
 
-                      {/* Floating Section Toolbar (Attached directly to each section) */}
+                      {/* Floating Section Toolbar */}
                       <div className="section-floating-toolbar">
                         <button
                           type="button"
@@ -2189,7 +2318,7 @@ export default function AdminDashboard() {
                           type="button"
                           className="sec-tool-btn"
                           onClick={() => handleToggleSectionVisibility(sec.id)}
-                          title="섹션 화면에서 숨기기"
+                          title="섹션 숨기기/보이기"
                         >
                           <EyeOff size={13} />
                         </button>
@@ -2213,656 +2342,1079 @@ export default function AdminDashboard() {
                           type="button"
                           className="sec-tool-btn primary"
                           onClick={() => handleOpenEditModal(sec.type, sec.id)}
-                          title="섹션 전체 내용 및 앵커 설정"
+                          title="섹션 종합 메타 및 설정"
                         >
-                          <Settings size={13} /> <span>섹션 설정</span>
+                          <Settings size={13} /> <span>섹션 종합 설정</span>
                         </button>
                       </div>
 
-                      {/* 1. HERO SECTION */}
+                      {/* 1. HERO SECTION (100% app/page.js Markup) */}
                       {sec.type === 'hero' && (
-                        <div style={{ padding: '60px 24px', backgroundColor: '#FAF9F6', textAlign: 'center' }}>
-                          {data.badge && (
-                            <div 
-                              onClick={() => handleOpenEditModal('hero', sec.id)}
-                              className="el-hover-target"
-                              style={{ display: 'inline-block', marginBottom: '14px', cursor: 'pointer' }}
-                            >
-                              <span style={{ backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3', color: '#8C6F3E', padding: '4px 14px', borderRadius: '16px', fontSize: '11px', fontWeight: '800' }}>
-                                {data.badge}
-                              </span>
-                            </div>
-                          )}
-
-                          <div 
-                            onClick={() => handleOpenEditModal('hero', sec.id)}
-                            className="el-hover-target"
-                            style={{ cursor: 'pointer', maxWidth: '800px', margin: '0 auto 14px auto' }}
-                          >
-                            <h1 style={{
-                              fontSize: previewDevice === 'mobile' ? '24px' : '36px',
-                              fontWeight: '900',
-                              color: '#2B2A27',
-                              lineHeight: 1.35,
-                              whiteSpace: 'pre-line',
-                              wordBreak: 'keep-all',
-                              margin: 0
-                            }}>
-                              {data.title || '새로운 오란다의 시작'}
-                            </h1>
-                          </div>
-
-                          {data.subtitle && (
-                            <div 
-                              onClick={() => handleOpenEditModal('hero', sec.id)}
-                              className="el-hover-target"
-                              style={{ cursor: 'pointer', maxWidth: '640px', margin: '0 auto 24px auto' }}
-                            >
-                              <p style={{
-                                fontSize: previewDevice === 'mobile' ? '13px' : '15px',
-                                color: '#6B6862',
-                                lineHeight: 1.6,
-                                whiteSpace: 'pre-line',
-                                wordBreak: 'keep-all',
-                                margin: 0
-                              }}>
-                                {data.subtitle}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* CTA Buttons */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '32px' }}>
-                            {data.ctaText && (
-                              <span 
-                                onClick={() => handleOpenEditModal('hero', sec.id)}
-                                className="el-hover-target"
-                                style={{
-                                  backgroundColor: '#FFAA00',
-                                  color: '#2B2A27',
-                                  padding: '12px 26px',
-                                  borderRadius: '30px',
-                                  fontWeight: '800',
-                                  fontSize: '14px',
-                                  cursor: 'pointer',
-                                  boxShadow: '0 4px 14px rgba(255,170,0,0.3)'
-                                }}
-                              >
-                                {data.ctaText} →
-                              </span>
-                            )}
-                            {data.storyLinkText && (
-                              <span 
-                                onClick={() => handleOpenEditModal('hero', sec.id)}
-                                className="el-hover-target"
-                                style={{
-                                  backgroundColor: '#FFFFFF',
-                                  border: '1px solid #D6D3CC',
-                                  color: '#2B2A27',
-                                  padding: '12px 22px',
-                                  borderRadius: '30px',
-                                  fontWeight: '700',
-                                  fontSize: '14px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {data.storyLinkText}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Hero Image */}
-                          <div 
-                            onClick={() => handleOpenEditModal('hero', sec.id)}
-                            className="el-hover-target"
-                            style={{
-                              maxWidth: '680px',
-                              margin: '0 auto',
-                              borderRadius: '16px',
-                              overflow: 'hidden',
-                              boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {data.image ? (
-                              <img src={data.image} alt="Hero" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                            ) : (
-                              <div style={{ padding: '60px 20px', backgroundColor: '#EDEAE4', color: '#8C8983', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                <ImageIcon size={36} />
-                                <span>대표 이미지를 등록해 주세요</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 2. STORY SECTION */}
-                      {sec.type === 'story' && (
-                        <div style={{ padding: '60px 24px', backgroundColor: '#FFFFFF' }}>
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : '1fr 1fr',
-                            gap: '32px',
-                            maxWidth: '960px',
-                            margin: '0 auto',
-                            alignItems: 'center'
-                          }}>
-                            {/* Image */}
-                            <div 
-                              onClick={() => handleOpenEditModal('story', sec.id)}
-                              className="el-hover-target"
-                              style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', cursor: 'pointer' }}
-                            >
-                              {data.image ? (
-                                <img src={data.image} alt="Story" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                              ) : (
-                                <div style={{ height: '280px', backgroundColor: '#EDEAE4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#8C8983', gap: '8px' }}>
-                                  <ImageIcon size={36} />
-                                  <span>스토리 사진 등록</span>
-                                </div>
+                        <section className="hero-section" id={sec.anchor || "hero"}>
+                          <div className="hero-bg-overlay"></div>
+                          <div className="container hero-container">
+                            <div className="hero-content">
+                              {data.badge && (
+                                <span 
+                                  className="hero-badge el-hover-target"
+                                  title="클릭하여 배지 문구 수정"
+                                  onClick={() => openElementModal({
+                                    title: "히어로 상단 배지 문구 수정",
+                                    desc: "메인 타이틀 위에 작게 강조되는 배지 텍스트입니다.",
+                                    sectionId: sec.id,
+                                    field: "badge",
+                                    type: "text",
+                                    value: data.badge
+                                  })}
+                                >
+                                  {data.badge}
+                                </span>
                               )}
-                            </div>
-
-                            {/* Story Texts */}
-                            <div 
-                              onClick={() => handleOpenEditModal('story', sec.id)}
-                              className="el-hover-target"
-                              style={{ cursor: 'pointer', padding: '8px' }}
-                            >
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
-                                {data.subtitle || 'BRAND STORY'}
-                              </span>
-                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '8px 0 16px 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                                {data.title || '자연에서 온 상큼함'}
-                              </h2>
-                              {data.sectionTitle && (
-                                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#2D6A4F', margin: '0 0 12px 0', wordBreak: 'keep-all' }}>
-                                  {data.sectionTitle}
-                                </h3>
-                              )}
-                              <p style={{ fontSize: '13px', color: '#6B6862', lineHeight: 1.65, margin: '0 0 10px 0', wordBreak: 'keep-all' }}>
-                                {data.body1}
-                              </p>
-                              {data.body2 && (
-                                <p style={{ fontSize: '13px', color: '#6B6862', lineHeight: 1.65, margin: '0 0 18px 0', wordBreak: 'keep-all' }}>
-                                  {data.body2}
+                              <h1 
+                                className="hero-title el-hover-target" 
+                                style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                title="클릭하여 메인 타이틀 수정 (Enter 줄바꿈 반영)"
+                                onClick={() => openElementModal({
+                                  title: "히어로 메인 타이틀 수정",
+                                  desc: "홈페이지 메인에 가장 크게 노출되는 대표 타이틀입니다. (줄바꿈 가능)",
+                                  sectionId: sec.id,
+                                  field: "title",
+                                  type: "textarea",
+                                  value: data.title
+                                })}
+                              >
+                                {data.title || "새로운 오란다의 시작"}
+                              </h1>
+                              {data.subtitle && (
+                                <p 
+                                  className="hero-subtitle el-hover-target" 
+                                  style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                  title="클릭하여 서브 설명 문구 수정"
+                                  onClick={() => openElementModal({
+                                    title: "히어로 서브타이틀 수정",
+                                    desc: "메인 타이틀 아래에 노출되는 설명 문구입니다.",
+                                    sectionId: sec.id,
+                                    field: "subtitle",
+                                    type: "textarea",
+                                    value: data.subtitle
+                                  })}
+                                >
+                                  {data.subtitle}
                                 </p>
                               )}
-
-                              {data.featureBadge && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3' }}>
-                                  <DynamicIcon name={data.featureIcon || 'Leaf'} size={20} color="#2D6A4F" />
-                                  <div>
-                                    <strong style={{ fontSize: '12px', color: '#2B2A27', display: 'block' }}>{data.featureBadge}</strong>
-                                    <span style={{ fontSize: '11px', color: '#6B6862' }}>{data.featureDesc}</span>
+                              <div className="hero-ctas">
+                                {data.ctaText && (
+                                  <span 
+                                    className="btn btn-primary el-hover-target"
+                                    style={{ cursor: 'pointer' }}
+                                    title="클릭하여 구매 버튼 문구 및 링크 수정"
+                                    onClick={() => openElementModal({
+                                      title: "메인 구매 버튼 설정",
+                                      desc: "버튼에 표시될 문구와 클릭 시 이동할 URL을 입력하세요.",
+                                      sectionId: sec.id,
+                                      type: "link",
+                                      value: { ctaText: data.ctaText, ctaLink: data.ctaLink }
+                                    })}
+                                  >
+                                    {data.ctaText} <ArrowRight size={18} />
+                                  </span>
+                                )}
+                                {data.storyLinkText && (
+                                  <span 
+                                    className="btn btn-outline el-hover-target"
+                                    style={{ cursor: 'pointer' }}
+                                    title="클릭하여 스토리 버튼 문구 수정"
+                                    onClick={() => openElementModal({
+                                      title: "스토리 링크 버튼 문구 수정",
+                                      desc: "브랜드 스토리로 안내하는 버튼 문구입니다.",
+                                      sectionId: sec.id,
+                                      field: "storyLinkText",
+                                      type: "text",
+                                      value: data.storyLinkText
+                                    })}
+                                  >
+                                    {data.storyLinkText}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="hero-image-wrapper">
+                              <div 
+                                className="hero-image-card el-hover-target"
+                                title="클릭하여 대표 비주얼 사진 변경"
+                                onClick={() => openElementModal({
+                                  title: "대표 비주얼 이미지 변경",
+                                  desc: "히어로 섹션에 표시될 대표 메인 이미지입니다.",
+                                  sectionId: sec.id,
+                                  field: "image",
+                                  type: "image",
+                                  value: data.image
+                                })}
+                              >
+                                {data.image ? (
+                                  <img src={data.image} alt="메인 비주얼" className="hero-image" />
+                                ) : (
+                                  <div style={{ height: '320px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAF6EE', color: '#8C6F3E', gap: '8px' }}>
+                                    <ImageIcon size={40} />
+                                    <span style={{ fontWeight: '700' }}>대표 이미지를 등록해 주세요</span>
                                   </div>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        </section>
                       )}
 
-                      {/* 3. FEATURES SECTION */}
+                      {/* 2. STORY SECTION (100% app/page.js Markup) */}
+                      {sec.type === 'story' && (
+                        <section className="story-section" id={sec.anchor || "story"}>
+                          <div className="container">
+                            <div className="section-header text-center">
+                              {data.subtitle && (
+                                <span 
+                                  className="section-subtitle el-hover-target"
+                                  title="클릭하여 스토리 라벨 수정"
+                                  onClick={() => openElementModal({
+                                    title: "스토리 서브 라벨 수정",
+                                    desc: "섹션 제목 상단에 영문/라벨로 작게 표시되는 텍스트입니다.",
+                                    sectionId: sec.id,
+                                    field: "subtitle",
+                                    type: "text",
+                                    value: data.subtitle
+                                  })}
+                                >
+                                  {data.subtitle}
+                                </span>
+                              )}
+                              <h2 
+                                className="section-title el-hover-target" 
+                                style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                title="클릭하여 스토리 제목 수정"
+                                onClick={() => openElementModal({
+                                  title: "스토리 메인 제목 수정",
+                                  desc: "브랜드 스토리 섹션의 큰 제목입니다.",
+                                  sectionId: sec.id,
+                                  field: "title",
+                                  type: "textarea",
+                                  value: data.title
+                                })}
+                              >
+                                {data.title || "자연에서 온 상큼함"}
+                              </h2>
+                              <div className="title-underline"></div>
+                            </div>
+                            <div className="story-grid">
+                              <div className="story-text">
+                                {data.sectionTitle && (
+                                  <h3 
+                                    className="el-hover-target"
+                                    title="클릭하여 소제목 수정"
+                                    onClick={() => openElementModal({
+                                      title: "스토리 본문 소제목 수정",
+                                      desc: "스토리 본문 상단의 녹색 강조 소제목입니다.",
+                                      sectionId: sec.id,
+                                      field: "sectionTitle",
+                                      type: "text",
+                                      value: data.sectionTitle
+                                    })}
+                                  >
+                                    {data.sectionTitle}
+                                  </h3>
+                                )}
+                                {data.body1 && (
+                                  <p 
+                                    className="el-hover-target" 
+                                    style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                    title="클릭하여 본문 단락 1 수정"
+                                    onClick={() => openElementModal({
+                                      title: "스토리 본문 단락 1 수정",
+                                      desc: "스토리의 첫 번째 설명 단락입니다.",
+                                      sectionId: sec.id,
+                                      field: "body1",
+                                      type: "textarea",
+                                      value: data.body1
+                                    })}
+                                  >
+                                    {data.body1}
+                                  </p>
+                                )}
+                                {data.body2 && (
+                                  <p 
+                                    className="el-hover-target" 
+                                    style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                    title="클릭하여 본문 단락 2 수정"
+                                    onClick={() => openElementModal({
+                                      title: "스토리 본문 단락 2 수정",
+                                      desc: "스토리의 두 번째 설명 단락입니다.",
+                                      sectionId: sec.id,
+                                      field: "body2",
+                                      type: "textarea",
+                                      value: data.body2
+                                    })}
+                                  >
+                                    {data.body2}
+                                  </p>
+                                )}
+                                {(data.featureBadge || data.featureDesc) && (
+                                  <div 
+                                    className="story-features el-hover-target"
+                                    title="클릭하여 하단 특장점 박스 수정"
+                                    onClick={() => openElementModal({
+                                      title: "스토리 하단 특장점 박스 수정",
+                                      desc: "스토리 하단에 아이콘과 함께 노출되는 핵심 요약 박스입니다.",
+                                      sectionId: sec.id,
+                                      type: "story-feature-box",
+                                      value: { featureBadge: data.featureBadge, featureDesc: data.featureDesc, featureIcon: data.featureIcon || 'Leaf' }
+                                    })}
+                                  >
+                                    <div className="story-feature-item">
+                                      <div className="icon-box">
+                                        <DynamicIcon name={data.featureIcon || 'Leaf'} size={22} />
+                                      </div>
+                                      <div>
+                                        {data.featureBadge && <h4>{data.featureBadge}</h4>}
+                                        {data.featureDesc && <p>{data.featureDesc}</p>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="story-visual">
+                                <div 
+                                  className="visual-card el-hover-target"
+                                  title="클릭하여 스토리 사진 변경"
+                                  onClick={() => openElementModal({
+                                    title: "스토리 이미지 변경",
+                                    desc: "브랜드 스토리를 소개하는 대표 사진입니다.",
+                                    sectionId: sec.id,
+                                    field: "image",
+                                    type: "image",
+                                    value: data.image
+                                  })}
+                                >
+                                  <div className="visual-deco-circle"></div>
+                                  {data.image ? (
+                                    <img src={data.image} alt="브랜드 스토리" className="story-img" />
+                                  ) : (
+                                    <div style={{ height: '320px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDEAE4', color: '#8C8983', gap: '8px' }}>
+                                      <ImageIcon size={36} />
+                                      <span>스토리 이미지를 등록해 주세요</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {/* 3. KEY FEATURES SECTION (100% app/page.js Markup) */}
                       {sec.type === 'features' && (() => {
                         const items = Array.isArray(data.items) ? data.items : [];
                         return (
-                          <div style={{ padding: '60px 24px', backgroundColor: '#FAF9F6' }}>
-                            <div 
-                              onClick={() => handleOpenEditModal('features', sec.id)}
-                              className="el-hover-target"
-                              style={{ textAlign: 'center', marginBottom: '32px', cursor: 'pointer', maxWidth: '600px', margin: '0 auto 32px auto' }}
-                            >
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
-                                {data.subtitle || 'KEY FEATURES'}
-                              </span>
-                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                                {data.title || '핵심 특장점'}
-                              </h2>
-                            </div>
-
-                            <div style={{
-                              display: 'grid',
-                              gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : `repeat(${Math.min(items.length || 3, 3)}, 1fr)`,
-                              gap: '16px',
-                              maxWidth: '960px',
-                              margin: '0 auto 20px auto'
-                            }}>
-                              {items.map((it, i) => (
-                                <div 
-                                  key={it.id || i} 
-                                  className="card-hover-box"
-                                  style={{ backgroundColor: '#FFFFFF', padding: '22px 18px', borderRadius: '12px', border: '1px solid #EAE8E3', textAlign: 'center' }}
+                          <section className="features-section" id={sec.anchor || "features"}>
+                            <div className="container">
+                              <div className="section-header text-center">
+                                {data.subtitle && (
+                                  <span 
+                                    className="section-subtitle el-hover-target"
+                                    title="클릭하여 특장점 라벨 수정"
+                                    onClick={() => openElementModal({
+                                      title: "특장점 서브 라벨 수정",
+                                      sectionId: sec.id,
+                                      field: "subtitle",
+                                      type: "text",
+                                      value: data.subtitle
+                                    })}
+                                  >
+                                    {data.subtitle}
+                                  </span>
+                                )}
+                                <h2 
+                                  className="section-title el-hover-target" 
+                                  style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                  title="클릭하여 특장점 제목 수정"
+                                  onClick={() => openElementModal({
+                                    title: "특장점 메인 제목 수정",
+                                    sectionId: sec.id,
+                                    field: "title",
+                                    type: "textarea",
+                                    value: data.title
+                                  })}
                                 >
-                                  {/* Card Actions Toolbar */}
-                                  <div className="card-item-toolbar">
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn edit"
-                                      onClick={() => handleOpenEditModal('features', sec.id)}
-                                      title="카드 수정"
-                                    >
-                                      <Edit3 size={11} /> <span>수정</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleMoveCard(sec.id, i, -1)}
-                                      disabled={i === 0}
-                                      title="앞으로"
-                                    >
-                                      <ChevronLeft size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleMoveCard(sec.id, i, 1)}
-                                      disabled={i === items.length - 1}
-                                      title="뒤로"
-                                    >
-                                      <ChevronRight size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleDuplicateCard(sec.id, i)}
-                                      title="카드 복제"
-                                    >
-                                      <Copy size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn delete"
-                                      onClick={() => handleDeleteCard(sec.id, i)}
-                                      title="카드 삭제"
-                                    >
-                                      <Trash2 size={11} />
-                                    </button>
-                                  </div>
+                                  {data.title || "핵심 특장점"}
+                                </h2>
+                                <div className="title-underline"></div>
+                              </div>
+                              <div className="features-grid">
+                                {items.map((item, idx) => (
+                                  <div key={item.id || idx} className="feature-card card-hover-box">
+                                    {/* Card Toolbar */}
+                                    <div className="card-item-toolbar">
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn edit"
+                                        onClick={() => openElementModal({
+                                          title: `특장점 카드 수정: ${item.title || '항목 ' + (idx + 1)}`,
+                                          desc: "특장점 아이콘, 타이틀, 상세 설명을 수정합니다.",
+                                          sectionId: sec.id,
+                                          field: "items",
+                                          cardIndex: idx,
+                                          type: "feature-card",
+                                          value: item
+                                        })}
+                                      >
+                                        <Edit3 size={11} /> <span>수정</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn"
+                                        onClick={() => handleMoveCard(sec.id, idx, -1)}
+                                        disabled={idx === 0}
+                                        title="좌측으로 이동"
+                                      >
+                                        <ChevronLeft size={11} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn"
+                                        onClick={() => handleMoveCard(sec.id, idx, 1)}
+                                        disabled={idx === items.length - 1}
+                                        title="우측으로 이동"
+                                      >
+                                        <ChevronRight size={11} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn"
+                                        onClick={() => handleDuplicateCard(sec.id, idx)}
+                                        title="카드 복제"
+                                      >
+                                        <Copy size={11} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn danger"
+                                        onClick={() => handleDeleteCard(sec.id, idx)}
+                                        title="카드 삭제"
+                                      >
+                                        <Trash2 size={11} />
+                                      </button>
+                                    </div>
 
-                                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
-                                    <DynamicIcon name={it.icon || 'Sparkles'} size={20} color="#2D6A4F" />
+                                    <div 
+                                      className="feature-icon el-hover-target"
+                                      title="클릭하여 카드 내용 수정"
+                                      onClick={() => openElementModal({
+                                        title: `특장점 카드 수정: ${item.title || '항목 ' + (idx + 1)}`,
+                                        desc: "아이콘, 타이틀, 상세 설명을 수정합니다.",
+                                        sectionId: sec.id,
+                                        field: "items",
+                                        cardIndex: idx,
+                                        type: "feature-card",
+                                        value: item
+                                      })}
+                                    >
+                                      <DynamicIcon name={item.icon || 'Sparkles'} size={24} />
+                                    </div>
+                                    <h3 
+                                      style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                      className="el-hover-target"
+                                      title="클릭하여 카드 내용 수정"
+                                      onClick={() => openElementModal({
+                                        title: `특장점 카드 수정: ${item.title || '항목 ' + (idx + 1)}`,
+                                        sectionId: sec.id,
+                                        field: "items",
+                                        cardIndex: idx,
+                                        type: "feature-card",
+                                        value: item
+                                      })}
+                                    >
+                                      {item.title}
+                                    </h3>
+                                    <p 
+                                      style={{ wordBreak: 'keep-all' }}
+                                      className="el-hover-target"
+                                      title="클릭하여 카드 내용 수정"
+                                      onClick={() => openElementModal({
+                                        title: `특장점 카드 수정: ${item.title || '항목 ' + (idx + 1)}`,
+                                        sectionId: sec.id,
+                                        field: "items",
+                                        cardIndex: idx,
+                                        type: "feature-card",
+                                        value: item
+                                      })}
+                                    >
+                                      {item.desc}
+                                    </p>
                                   </div>
-                                  <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#2B2A27', margin: '0 0 8px 0', wordBreak: 'keep-all' }}>
-                                    {it.title}
-                                  </h3>
-                                  <p style={{ fontSize: '12px', color: '#6B6862', lineHeight: 1.5, margin: 0, wordBreak: 'keep-all' }}>
-                                    {it.desc}
-                                  </p>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddCard(sec.id, 'features')}
+                                  className="btn-add-card-item"
+                                >
+                                  <Plus size={15} /> <span>+ 새 특장점 카드 추가</span>
+                                </button>
+                              </div>
                             </div>
-
-                            {/* Add New Feature Card Button */}
-                            <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-                              <button
-                                type="button"
-                                onClick={() => handleAddCard(sec.id, 'features')}
-                                className="btn-add-card-item"
-                              >
-                                <Plus size={15} /> <span>+ 새 특장점 카드 추가</span>
-                              </button>
-                            </div>
-                          </div>
+                          </section>
                         );
                       })()}
 
-                      {/* 4. LINEUP SECTION */}
+                      {/* 4. PRODUCT LINEUP SECTION (100% app/page.js Markup) */}
                       {sec.type === 'lineup' && (() => {
                         const items = Array.isArray(data.items) ? data.items : [];
                         return (
-                          <div style={{ padding: '60px 24px', backgroundColor: '#FFFFFF' }}>
-                            <div 
-                              onClick={() => handleOpenEditModal('lineup', sec.id)}
-                              className="el-hover-target"
-                              style={{ textAlign: 'center', marginBottom: '32px', cursor: 'pointer', maxWidth: '600px', margin: '0 auto 32px auto' }}
-                            >
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
-                                {data.subtitle || 'PRODUCT LINEUP'}
-                              </span>
-                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                                {data.title || '상큼함을 담은 라인업'}
-                              </h2>
-                            </div>
-
-                            <div style={{
-                              display: 'grid',
-                              gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))',
-                              gap: '18px',
-                              maxWidth: '960px',
-                              margin: '0 auto 20px auto'
-                            }}>
-                              {items.map((prod, i) => (
-                                <div 
-                                  key={prod.id || i} 
-                                  className="card-hover-box"
-                                  style={{ border: '1px solid #EAE8E3', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column' }}
+                          <section className="lineup-section" id={sec.anchor || "lineup"}>
+                            <div className="container">
+                              <div className="section-header text-center">
+                                {data.subtitle && (
+                                  <span 
+                                    className="section-subtitle el-hover-target"
+                                    title="클릭하여 라인업 라벨 수정"
+                                    onClick={() => openElementModal({
+                                      title: "상품 라인업 서브 라벨 수정",
+                                      sectionId: sec.id,
+                                      field: "subtitle",
+                                      type: "text",
+                                      value: data.subtitle
+                                    })}
+                                  >
+                                    {data.subtitle}
+                                  </span>
+                                )}
+                                <h2 
+                                  className="section-title el-hover-target" 
+                                  style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                  title="클릭하여 라인업 제목 수정"
+                                  onClick={() => openElementModal({
+                                    title: "상품 라인업 메인 제목 수정",
+                                    sectionId: sec.id,
+                                    field: "title",
+                                    type: "textarea",
+                                    value: data.title
+                                  })}
                                 >
-                                  {/* Card Actions Toolbar */}
-                                  <div className="card-item-toolbar">
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn edit"
-                                      onClick={() => handleOpenEditModal('lineup', sec.id)}
-                                      title="상품 정보 및 이미지 수정"
-                                    >
-                                      <Edit3 size={11} /> <span>수정</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleMoveCard(sec.id, i, -1)}
-                                      disabled={i === 0}
-                                      title="앞으로"
-                                    >
-                                      <ChevronLeft size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleMoveCard(sec.id, i, 1)}
-                                      disabled={i === items.length - 1}
-                                      title="뒤로"
-                                    >
-                                      <ChevronRight size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleDuplicateCard(sec.id, i)}
-                                      title="상품 복제"
-                                    >
-                                      <Copy size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn delete"
-                                      onClick={() => handleDeleteCard(sec.id, i)}
-                                      title="상품 삭제"
-                                    >
-                                      <Trash2 size={11} />
-                                    </button>
-                                  </div>
+                                  {data.title || "대표 상품 라인업"}
+                                </h2>
+                                <div className="title-underline"></div>
+                              </div>
+                              <div className="lineup-grid">
+                                {items.map((product, idx) => {
+                                  const originalPrice = product.originalPrice || 0;
+                                  const price = product.price || 0;
+                                  const discount = originalPrice > price ? Math.round((originalPrice - price) / originalPrice * 100) : 0;
 
-                                  {/* Product Image or Clean Placeholder */}
-                                  <div style={{ height: '170px', backgroundColor: '#FAF9F6', overflow: 'hidden', position: 'relative' }}>
-                                    {prod.image ? (
-                                      <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#A09E9B', gap: '4px' }}>
-                                        <ImageIcon size={28} style={{ opacity: 0.5 }} />
-                                        <span style={{ fontSize: '11px', fontWeight: '700' }}>이미지 준비 중</span>
+                                  return (
+                                    <div key={product.id || idx} className="product-card card-hover-box">
+                                      {/* Card Toolbar */}
+                                      <div className="card-item-toolbar">
+                                        <button
+                                          type="button"
+                                          className="card-tool-btn edit"
+                                          onClick={() => openElementModal({
+                                            title: `상품 정보 수정: ${product.name}`,
+                                            desc: "상품명, 설명, 정상가/판매가, 단위, 배지, 링크, 사진을 수정합니다.",
+                                            sectionId: sec.id,
+                                            field: "items",
+                                            cardIndex: idx,
+                                            type: "product-card",
+                                            value: product
+                                          })}
+                                        >
+                                          <Edit3 size={11} /> <span>수정</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="card-tool-btn"
+                                          onClick={() => handleMoveCard(sec.id, idx, -1)}
+                                          disabled={idx === 0}
+                                          title="좌측으로 이동"
+                                        >
+                                          <ChevronLeft size={11} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="card-tool-btn"
+                                          onClick={() => handleMoveCard(sec.id, idx, 1)}
+                                          disabled={idx === items.length - 1}
+                                          title="우측으로 이동"
+                                        >
+                                          <ChevronRight size={11} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="card-tool-btn"
+                                          onClick={() => handleDuplicateCard(sec.id, idx)}
+                                          title="상품 복제"
+                                        >
+                                          <Copy size={11} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="card-tool-btn danger"
+                                          onClick={() => handleDeleteCard(sec.id, idx)}
+                                          title="상품 삭제"
+                                        >
+                                          <Trash2 size={11} />
+                                        </button>
                                       </div>
-                                    )}
-                                    {prod.badge && (
-                                      <span style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: '#2D6A4F', color: '#FFFFFF', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>
-                                        {prod.badge}
-                                      </span>
-                                    )}
-                                  </div>
 
-                                  <div style={{ padding: '14px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                                    <div>
-                                      <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#2B2A27', margin: '0 0 4px 0', wordBreak: 'keep-all' }}>{prod.name}</h4>
-                                      <p style={{ fontSize: '11px', color: '#6B6862', margin: '0 0 8px 0', lineHeight: 1.4, wordBreak: 'keep-all' }}>{prod.desc}</p>
-                                    </div>
-                                    <div>
-                                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                        <strong style={{ fontSize: '16px', color: '#2D6A4F' }}>{Number(prod.price || 0).toLocaleString()}원</strong>
-                                        {prod.originalPrice ? (
-                                          <span style={{ fontSize: '11px', color: '#A09E9B', textDecoration: 'line-through' }}>{Number(prod.originalPrice).toLocaleString()}원</span>
-                                        ) : null}
+                                      {product.badge && (
+                                        <div className={`product-badge ${product.badge === 'Gift' || product.badge === '인기' ? 'accent' : ''}`}>
+                                          {product.badge}
+                                        </div>
+                                      )}
+                                      <div 
+                                        className="product-img-wrapper el-hover-target"
+                                        title="클릭하여 상품 사진/정보 수정"
+                                        onClick={() => openElementModal({
+                                          title: `상품 정보 수정: ${product.name}`,
+                                          desc: "상품명, 설명, 정상가/판매가, 단위, 배지, 링크, 사진을 수정합니다.",
+                                          sectionId: sec.id,
+                                          field: "items",
+                                          cardIndex: idx,
+                                          type: "product-card",
+                                          value: product
+                                        })}
+                                      >
+                                        {product.image ? (
+                                          <img 
+                                            src={product.image} 
+                                            alt={product.name} 
+                                            className="product-img" 
+                                          />
+                                        ) : (
+                                          <div style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            backgroundColor: '#FAF9F6',
+                                            color: '#A09E9B',
+                                            gap: '6px',
+                                            fontSize: '13px',
+                                            fontWeight: '600'
+                                          }}>
+                                            <span style={{ fontSize: '24px' }}>📷</span>
+                                            <span>이미지 준비 중</span>
+                                          </div>
+                                        )}
                                       </div>
-                                      <span style={{ fontSize: '11px', color: '#8C6F3E', display: 'block', marginTop: '2px' }}>{prod.unit}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                                      <div className="product-info">
+                                        <h3 
+                                          className="product-name el-hover-target" 
+                                          style={{ fontSize: '17px', minHeight: '52px', lineHeight: '1.4', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                          title="클릭하여 상품명/정보 수정"
+                                          onClick={() => openElementModal({
+                                            title: `상품 정보 수정: ${product.name}`,
+                                            sectionId: sec.id,
+                                            field: "items",
+                                            cardIndex: idx,
+                                            type: "product-card",
+                                            value: product
+                                          })}
+                                        >
+                                          {product.name}
+                                        </h3>
+                                        <p 
+                                          className="product-desc el-hover-target" 
+                                          style={{ fontSize: '13px', marginBottom: '16px', wordBreak: 'keep-all' }}
+                                          title="클릭하여 상품 설명 수정"
+                                          onClick={() => openElementModal({
+                                            title: `상품 정보 수정: ${product.name}`,
+                                            sectionId: sec.id,
+                                            field: "items",
+                                            cardIndex: idx,
+                                            type: "product-card",
+                                            value: product
+                                          })}
+                                        >
+                                          {product.desc}
+                                        </p>
+                                        
+                                        {/* Price with Original Price and Discount */}
+                                        <div 
+                                          className="product-price el-hover-target" 
+                                          style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', marginBottom: '16px' }}
+                                          title="클릭하여 가격 수정"
+                                          onClick={() => openElementModal({
+                                            title: `상품 정보 수정: ${product.name}`,
+                                            sectionId: sec.id,
+                                            field: "items",
+                                            cardIndex: idx,
+                                            type: "product-card",
+                                            value: product
+                                          })}
+                                        >
+                                          {discount > 0 && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                                {originalPrice.toLocaleString()}원
+                                              </span>
+                                              <span style={{ backgroundColor: 'var(--primary-yuzu-light)', color: 'var(--text-dark)', padding: '1px 5px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
+                                                -{discount}%
+                                              </span>
+                                            </div>
+                                          )}
+                                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '2px' }}>
+                                            <span className="price" style={{ fontSize: '20px' }}>{price.toLocaleString()}원</span>
+                                            {product.unit && <span className="unit">{product.unit}</span>}
+                                          </div>
+                                        </div>
 
-                            {/* Add New Lineup Card Button */}
-                            <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-                              <button
-                                type="button"
-                                onClick={() => handleAddCard(sec.id, 'lineup')}
-                                className="btn-add-card-item"
-                              >
-                                <Plus size={15} /> <span>+ 새 상품 카드 추가</span>
-                              </button>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
+                                          <span 
+                                            className="product-buy-btn el-hover-target"
+                                            style={{
+                                              backgroundColor: 'var(--accent-green)',
+                                              color: 'white',
+                                              borderRadius: 'var(--radius-sm)',
+                                              padding: '12px 0',
+                                              textAlign: 'center',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              fontSize: '14px',
+                                              fontWeight: '700',
+                                              width: '100%',
+                                              cursor: 'pointer'
+                                            }}
+                                            title="클릭하여 구매 링크 수정"
+                                            onClick={() => openElementModal({
+                                              title: `상품 구매 링크 수정: ${product.name}`,
+                                              desc: "스마트스토어 상품 상세 페이지 URL을 설정합니다.",
+                                              sectionId: sec.id,
+                                              field: "items",
+                                              cardIndex: idx,
+                                              type: "product-card",
+                                              value: product
+                                            })}
+                                          >
+                                            스마트스토어로 구매
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddCard(sec.id, 'lineup')}
+                                  className="btn-add-card-item"
+                                >
+                                  <Plus size={15} /> <span>+ 새 상품 추가</span>
+                                </button>
+                              </div>
                             </div>
-                          </div>
+                          </section>
                         );
                       })()}
 
-                      {/* 5. REVIEWS SECTION */}
+                      {/* 5. CUSTOMER REVIEWS SECTION (100% app/page.js Markup) */}
                       {sec.type === 'reviews' && (() => {
                         const items = Array.isArray(data.items) ? data.items : [];
                         return (
-                          <div style={{ padding: '60px 24px', backgroundColor: '#FAF9F6' }}>
-                            <div 
-                              onClick={() => handleOpenEditModal('reviews', sec.id)}
-                              className="el-hover-target"
-                              style={{ textAlign: 'center', marginBottom: '32px', cursor: 'pointer', maxWidth: '600px', margin: '0 auto 32px auto' }}
-                            >
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
-                                {data.subtitle || 'CUSTOMER REVIEWS'}
-                              </span>
-                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                                {data.title || '직접 맛보신 분들의 생생한 후기'}
-                              </h2>
-                            </div>
-
-                            <div style={{
-                              display: 'grid',
-                              gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : 'repeat(auto-fit, minmax(260px, 1fr))',
-                              gap: '16px',
-                              maxWidth: '960px',
-                              margin: '0 auto 20px auto'
-                            }}>
-                              {items.map((rev, i) => (
-                                <div 
-                                  key={rev.id || i} 
-                                  className="card-hover-box"
-                                  style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAE8E3', borderRadius: '12px', padding: '18px' }}
+                          <section className="reviews-section" id={sec.anchor || "reviews"}>
+                            <div className="container">
+                              <div className="section-header text-center">
+                                {data.subtitle && (
+                                  <span 
+                                    className="section-subtitle el-hover-target"
+                                    title="클릭하여 후기 라벨 수정"
+                                    onClick={() => openElementModal({
+                                      title: "고객 후기 서브 라벨 수정",
+                                      sectionId: sec.id,
+                                      field: "subtitle",
+                                      type: "text",
+                                      value: data.subtitle
+                                    })}
+                                  >
+                                    {data.subtitle}
+                                  </span>
+                                )}
+                                <h2 
+                                  className="section-title el-hover-target" 
+                                  style={{ whiteSpace: 'pre-line', wordBreak: 'keep-all' }}
+                                  title="클릭하여 후기 제목 수정"
+                                  onClick={() => openElementModal({
+                                    title: "고객 후기 메인 제목 수정",
+                                    sectionId: sec.id,
+                                    field: "title",
+                                    type: "textarea",
+                                    value: data.title
+                                  })}
                                 >
-                                  {/* Card Actions Toolbar */}
-                                  <div className="card-item-toolbar">
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn edit"
-                                      onClick={() => handleOpenEditModal('reviews', sec.id)}
-                                      title="후기 수정"
-                                    >
-                                      <Edit3 size={11} /> <span>수정</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleMoveCard(sec.id, i, -1)}
-                                      disabled={i === 0}
-                                      title="앞으로"
-                                    >
-                                      <ChevronLeft size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleMoveCard(sec.id, i, 1)}
-                                      disabled={i === items.length - 1}
-                                      title="뒤로"
-                                    >
-                                      <ChevronRight size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn"
-                                      onClick={() => handleDuplicateCard(sec.id, i)}
-                                      title="후기 복제"
-                                    >
-                                      <Copy size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="card-tool-btn delete"
-                                      onClick={() => handleDeleteCard(sec.id, i)}
-                                      title="후기 삭제"
-                                    >
-                                      <Trash2 size={11} />
-                                    </button>
-                                  </div>
+                                  {data.title || "고객 생생 후기"}
+                                </h2>
+                                <div className="title-underline"></div>
+                              </div>
+                              <div className="reviews-grid">
+                                {items.map((rev, idx) => (
+                                  <div key={rev.id || idx} className="review-card card-hover-box">
+                                    {/* Card Toolbar */}
+                                    <div className="card-item-toolbar">
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn edit"
+                                        onClick={() => openElementModal({
+                                          title: `고객 후기 수정: ${rev.author || '고객 ' + (idx + 1)}`,
+                                          desc: "작성자명, 별점, 구매상품, 후기 내용, 태그를 수정합니다.",
+                                          sectionId: sec.id,
+                                          field: "items",
+                                          cardIndex: idx,
+                                          type: "review-card",
+                                          value: rev
+                                        })}
+                                      >
+                                        <Edit3 size={11} /> <span>수정</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn"
+                                        onClick={() => handleMoveCard(sec.id, idx, -1)}
+                                        disabled={idx === 0}
+                                        title="좌측으로 이동"
+                                      >
+                                        <ChevronLeft size={11} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn"
+                                        onClick={() => handleMoveCard(sec.id, idx, 1)}
+                                        disabled={idx === items.length - 1}
+                                        title="우측으로 이동"
+                                      >
+                                        <ChevronRight size={11} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn"
+                                        onClick={() => handleDuplicateCard(sec.id, idx)}
+                                        title="후기 복제"
+                                      >
+                                        <Copy size={11} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="card-tool-btn danger"
+                                        onClick={() => handleDeleteCard(sec.id, idx)}
+                                        title="후기 삭제"
+                                      >
+                                        <Trash2 size={11} />
+                                      </button>
+                                    </div>
 
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#E8A317', marginBottom: '8px' }}>
-                                    {[...Array(rev.stars || rev.rating || 5)].map((_, idxStar) => (
-                                      <Star key={idxStar} size={14} fill="#E8A317" />
-                                    ))}
+                                    <div 
+                                      className="review-stars el-hover-target"
+                                      title="클릭하여 후기 수정"
+                                      onClick={() => openElementModal({
+                                        title: `고객 후기 수정: ${rev.author || '고객 ' + (idx + 1)}`,
+                                        sectionId: sec.id,
+                                        field: "items",
+                                        cardIndex: idx,
+                                        type: "review-card",
+                                        value: rev
+                                      })}
+                                    >
+                                      {[...Array(rev.stars || rev.rating || 5)].map((_, i) => (
+                                        <Star key={i} size={18} className="fill-star" />
+                                      ))}
+                                    </div>
+                                    <p 
+                                      className="review-text el-hover-target" 
+                                      style={{ wordBreak: 'keep-all', whiteSpace: 'pre-line' }}
+                                      title="클릭하여 후기 수정"
+                                      onClick={() => openElementModal({
+                                        title: `고객 후기 수정: ${rev.author || '고객 ' + (idx + 1)}`,
+                                        sectionId: sec.id,
+                                        field: "items",
+                                        cardIndex: idx,
+                                        type: "review-card",
+                                        value: rev
+                                      })}
+                                    >
+                                      "{rev.text || rev.content}"
+                                    </p>
+                                    <div 
+                                      className="review-author el-hover-target"
+                                      title="클릭하여 후기 수정"
+                                      onClick={() => openElementModal({
+                                        title: `고객 후기 수정: ${rev.author || '고객 ' + (idx + 1)}`,
+                                        sectionId: sec.id,
+                                        field: "items",
+                                        cardIndex: idx,
+                                        type: "review-card",
+                                        value: rev
+                                      })}
+                                    >
+                                      <div className="author-info">
+                                        <span className="author-name">{rev.author}</span>
+                                        <span className="author-tag">{rev.tag}</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <p style={{ fontSize: '13px', color: '#2B2A27', lineHeight: 1.55, margin: '0 0 12px 0', wordBreak: 'keep-all' }}>
-                                    "{rev.text || rev.content}"
-                                  </p>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#8C8983' }}>
-                                    <span>{rev.author} · {rev.product}</span>
-                                    {rev.tag && <span style={{ color: '#2D6A4F', fontWeight: '700' }}>#{rev.tag}</span>}
-                                  </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddCard(sec.id, 'reviews')}
+                                  className="btn-add-card-item"
+                                >
+                                  <Plus size={15} /> <span>+ 새 고객 후기 추가</span>
+                                </button>
+                              </div>
                             </div>
-
-                            {/* Add New Review Card Button */}
-                            <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-                              <button
-                                type="button"
-                                onClick={() => handleAddCard(sec.id, 'reviews')}
-                                className="btn-add-card-item"
-                              >
-                                <Plus size={15} /> <span>+ 새 고객 후기 추가</span>
-                              </button>
-                            </div>
-                          </div>
+                          </section>
                         );
                       })()}
 
-                      {/* 6. CTA BANNER SECTION */}
+                      {/* 6. CTA BANNER SECTION (100% app/page.js Markup) */}
                       {sec.type === 'cta' && (
-                        <div style={{ padding: '60px 24px', backgroundColor: '#2D6A4F', color: '#FFFFFF', textAlign: 'center' }}>
-                          {data.badge && (
-                            <div 
-                              onClick={() => handleOpenEditModal('cta', sec.id)}
-                              className="el-hover-target"
-                              style={{ display: 'inline-block', marginBottom: '14px', cursor: 'pointer' }}
-                            >
-                              <span style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF', padding: '4px 14px', borderRadius: '16px', fontSize: '11px', fontWeight: '700' }}>
+                        <section key={sec.id} id={sec.anchor || "cta"} style={{
+                          backgroundColor: 'var(--accent-green, #2D6A4F)',
+                          color: 'white',
+                          padding: '64px 20px',
+                          textAlign: 'center'
+                        }}>
+                          <div className="container" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                            {data.badge && (
+                              <span 
+                                className="el-hover-target"
+                                style={{
+                                  display: 'inline-block',
+                                  backgroundColor: 'rgba(255,255,255,0.2)',
+                                  padding: '4px 14px',
+                                  borderRadius: '20px',
+                                  fontSize: '13px',
+                                  fontWeight: '800',
+                                  letterSpacing: '1px',
+                                  marginBottom: '16px',
+                                  cursor: 'pointer'
+                                }}
+                                title="클릭하여 배지 문구 수정"
+                                onClick={() => openElementModal({
+                                  title: "CTA 배지 문구 수정",
+                                  desc: "하단 배너 타이틀 위에 표시되는 강조 배지입니다.",
+                                  sectionId: sec.id,
+                                  field: "badge",
+                                  type: "text",
+                                  value: data.badge
+                                })}
+                              >
                                 {data.badge}
                               </span>
-                            </div>
-                          )}
-
-                          <h2 
-                            onClick={() => handleOpenEditModal('cta', sec.id)}
-                            className="el-hover-target"
-                            style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#FFFFFF', margin: '0 0 10px 0', whiteSpace: 'pre-line', wordBreak: 'keep-all', cursor: 'pointer' }}
-                          >
-                            {data.title || '향긋한 고흥 유자의 감동을\n지금 바로 만나보세요'}
-                          </h2>
-
-                          <p style={{ fontSize: '13px', opacity: 0.9, maxWidth: '500px', margin: '0 auto 24px auto', lineHeight: 1.5, wordBreak: 'keep-all' }}>
-                            {data.subtitle || '정성을 다해 정직하게 만든 프리미엄 수제 디저트'}
-                          </p>
-
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            <span style={{ backgroundColor: '#FFFFFF', color: '#2D6A4F', padding: '10px 22px', borderRadius: '24px', fontSize: '13px', fontWeight: '800' }}>
-                              {data.ctaText || '스마트스토어로 구매하기'}
-                            </span>
-                            {data.contactText && (
-                              <span style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#FFFFFF', padding: '10px 18px', borderRadius: '24px', fontSize: '13px', fontWeight: '700' }}>
-                                {data.contactText}
-                              </span>
                             )}
+                            <h2 
+                              className="el-hover-target"
+                              style={{
+                                fontSize: previewDevice === 'mobile' ? '22px' : '32px',
+                                fontWeight: '800',
+                                lineHeight: '1.4',
+                                whiteSpace: 'pre-line',
+                                wordBreak: 'keep-all',
+                                marginBottom: '16px',
+                                color: 'white',
+                                cursor: 'pointer'
+                              }}
+                              title="클릭하여 타이틀 수정"
+                              onClick={() => openElementModal({
+                                title: "CTA 메인 타이틀 수정",
+                                desc: "하단 구매 유도 배너의 대표 제목입니다. (줄바꿈 가능)",
+                                sectionId: sec.id,
+                                field: "title",
+                                type: "textarea",
+                                value: data.title
+                              })}
+                            >
+                              {data.title || "향긋한 고흥 유자의 감동을\n지금 바로 만나보세요"}
+                            </h2>
+                            {data.subtitle && (
+                              <p 
+                                className="el-hover-target"
+                                style={{ fontSize: '16px', opacity: 0.9, whiteSpace: 'pre-line', wordBreak: 'keep-all', marginBottom: '28px', cursor: 'pointer' }}
+                                title="클릭하여 서브 설명 수정"
+                                onClick={() => openElementModal({
+                                  title: "CTA 서브타이틀 수정",
+                                  desc: "하단 배너 타이틀 아래의 설명 문구입니다.",
+                                  sectionId: sec.id,
+                                  field: "subtitle",
+                                  type: "textarea",
+                                  value: data.subtitle
+                                })}
+                              >
+                                {data.subtitle}
+                              </p>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                              {(data.ctaText || data.buttonText) && (
+                                <span 
+                                  className="btn btn-primary el-hover-target"
+                                  style={{ backgroundColor: 'white', color: 'var(--accent-green, #2D6A4F)', cursor: 'pointer' }}
+                                  title="클릭하여 구매 버튼 설정"
+                                  onClick={() => openElementModal({
+                                    title: "구매 바로가기 버튼 설정",
+                                    desc: "하단 배너의 대표 구매 버튼 문구와 이동 URL입니다.",
+                                    sectionId: sec.id,
+                                    type: "link",
+                                    value: { ctaText: data.ctaText || data.buttonText, ctaLink: data.ctaLink || data.buttonLink }
+                                  })}
+                                >
+                                  {data.ctaText || data.buttonText || "스마트스토어로 구매하기"} <ArrowRight size={18} />
+                                </span>
+                              )}
+                              {data.contactText && (
+                                <span 
+                                  className="btn btn-outline el-hover-target"
+                                  style={{ borderColor: 'white', color: 'white', cursor: 'pointer' }}
+                                  title="클릭하여 문의 버튼 설정"
+                                  onClick={() => openElementModal({
+                                    title: "문의 버튼 문구 및 링크 수정",
+                                    desc: "고객 문의 또는 단체 주문 안내 버튼입니다.",
+                                    sectionId: sec.id,
+                                    type: "link",
+                                    value: { contactText: data.contactText, contactLink: data.contactLink }
+                                  })}
+                                >
+                                  {data.contactText}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        </section>
                       )}
                     </div>
                   );
                 })}
 
-                {/* 2.3 Live Canvas Footer */}
-                <div 
-                  className="canvas-section-box"
-                  style={{
-                    backgroundColor: '#1C1B18',
-                    color: '#FAF9F6',
-                    padding: '36px 24px',
-                    position: 'relative'
-                  }}
-                >
-                  <div className="section-floating-tag">
-                    <span>푸터 및 사업자 정보</span>
-                  </div>
-                  <div className="section-floating-toolbar">
-                    <button
-                      type="button"
-                      className="sec-tool-btn primary"
-                      onClick={() => handleOpenEditModal('footer')}
-                      title="푸터 회사 정보 및 SNS 링크 수정"
-                    >
-                      <Settings size={12} /> <span>푸터 설정</span>
-                    </button>
-                  </div>
-
-                  <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px' }}>
-                      <div 
-                        onClick={() => handleOpenEditModal('footer')}
-                        className="el-hover-target"
-                        style={{ cursor: 'pointer', padding: '4px' }}
-                      >
-                        <span style={{ fontSize: '18px', fontWeight: '900', color: '#E8A317', display: 'block', marginBottom: '4px' }}>
-                          {landingSettings.footer?.brandName || 'Yuzu Oranda'}
-                        </span>
-                        <p style={{ fontSize: '12px', color: '#B3B0A6', margin: 0, lineHeight: 1.5 }}>
-                          {landingSettings.footer?.desc || '바삭함 속에 피어나는 싱그러움. 자연에서 온 유자와 전통 오란다의 맛있는 만남.'}
-                        </p>
+                {/* 2.3 Live Canvas Footer (100% app/page.js Markup) */}
+                {(() => {
+                  const comp = landingSettings.footer?.companyInfo || {};
+                  return (
+                    <div className="canvas-section-box" style={{ position: 'relative' }}>
+                      <div className="section-floating-tag">
+                        <span>푸터 및 사업자 정보</span>
                       </div>
-
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {(landingSettings.footer?.snsLinks || []).filter(s => s.enabled).map(s => (
-                          <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#FAF9F6', backgroundColor: 'rgba(255,255,255,0.08)', padding: '6px 12px', borderRadius: '16px', fontSize: '12px' }}>
-                            <DynamicIcon name={s.icon || 'ExternalLink'} size={13} color="#FAF9F6" />
-                            <span>{s.name}</span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Company Info */}
-                    {(() => {
-                      const comp = landingSettings.footer?.companyInfo || {};
-                      return (
-                        <div 
+                      <div className="section-floating-toolbar">
+                        <button
+                          type="button"
+                          className="sec-tool-btn primary"
                           onClick={() => handleOpenEditModal('footer')}
-                          className="el-hover-target"
-                          style={{ cursor: 'pointer', padding: '6px', fontSize: '12px', color: '#8C8983', lineHeight: 1.7 }}
+                          title="푸터 회사 정보 및 SNS 링크 종합 수정"
                         >
-                          <div>
-                            <strong>상호: {comp.companyName || '유자품은 오란다&까부리'}</strong> | 
-                            <span> 대표자: {comp.representative || '정귀례'}</span> | 
-                            <span> 사업자등록번호: {comp.bizNumber || '566-82-00511'}</span>
+                          <Settings size={12} /> <span>푸터 종합 설정</span>
+                        </button>
+                      </div>
+
+                      <footer className="footer">
+                        <div className="container footer-container">
+                          <div className="footer-brand">
+                            <span 
+                              className="footer-logo-en el-hover-target"
+                              title="클릭하여 브랜드 영문명 수정"
+                              onClick={() => openElementModal({
+                                title: "푸터 브랜드 영문명 수정",
+                                desc: "푸터 상단에 크게 표시되는 브랜드 영문명입니다.",
+                                sectionId: 'footer',
+                                field: 'brandName',
+                                type: 'text',
+                                value: landingSettings.footer?.brandName || 'Yuzu Oranda'
+                              })}
+                            >
+                              {landingSettings.footer?.brandName || "Yuzu Oranda"}
+                            </span>
+                            <p 
+                              className="footer-desc el-hover-target" 
+                              style={{ wordBreak: 'keep-all', cursor: 'pointer' }}
+                              title="클릭하여 푸터 소개 문구 수정"
+                              onClick={() => openElementModal({
+                                title: "푸터 브랜드 소개 문구 수정",
+                                desc: "푸터 로고 하단에 표시되는 브랜드 소개 슬로건입니다.",
+                                sectionId: 'footer',
+                                field: 'desc',
+                                type: 'textarea',
+                                value: landingSettings.footer?.desc || "바삭함 속에 피어나는 싱그러움. 자연에서 온 유자와 전통 오란다의 맛있는 만남."
+                              })}
+                            >
+                              {landingSettings.footer?.desc || "바삭함 속에 피어나는 싱그러움. 자연에서 온 유자와 전통 오란다의 맛있는 만남."}
+                            </p>
+                            
+                            {/* SNS links */}
+                            <div 
+                              className="sns-links el-hover-target"
+                              title="클릭하여 푸터 SNS 링크 및 채널 관리"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => handleOpenEditModal('footer')}
+                            >
+                              {(landingSettings.footer?.snsLinks || [])
+                                .filter(sns => sns.enabled !== false)
+                                .map((sns) => {
+                                  if (sns.platform === 'instagram') {
+                                    return (
+                                      <a key={sns.id} href="#" onClick={(e) => e.preventDefault()} aria-label="인스타그램">
+                                        <Instagram size={18} />
+                                      </a>
+                                    );
+                                  }
+                                  if (sns.platform === 'kakao') {
+                                    return (
+                                      <a key={sns.id} href="#" onClick={(e) => e.preventDefault()} aria-label="카카오톡">
+                                        <span style={{ fontSize: '13px', fontWeight: 'bold' }}>Talk</span>
+                                      </a>
+                                    );
+                                  }
+                                  if (sns.platform === 'facebook') {
+                                    return (
+                                      <a key={sns.id} href="#" onClick={(e) => e.preventDefault()} aria-label="페이스북">
+                                        <Facebook size={18} />
+                                      </a>
+                                    );
+                                  }
+                                  return (
+                                    <a key={sns.id} href="#" onClick={(e) => e.preventDefault()} aria-label={sns.name}>
+                                      <DynamicIcon name={sns.icon || "ExternalLink"} size={16} />
+                                    </a>
+                                  );
+                                })}
+                            </div>
                           </div>
-                          <div>
-                            <span>통신판매업신고: {comp.orderReport || '제 2026-전남고흥-0000호'}</span> | 
-                            <span> 고객센터: {comp.phone || '061-835-1366'}</span> | 
-                            <span> 이메일: {comp.email || 'nanuri1366@daum.net'}</span>
-                          </div>
-                          <div>
-                            <span>주소: {comp.address || '전남광주통합특별시 고흥군 고흥읍 봉동주공길 9, 1층'}</span>
-                          </div>
-                          <div style={{ marginTop: '8px', color: '#666' }}>
-                            <span>{comp.copyright || '© 2026 유자품은 오란다&까부리. All Rights Reserved.'}</span>
+
+                          <div 
+                            className="footer-info el-hover-target"
+                            title="클릭하여 사업자등록번호, 대표자, 주소 등 수정"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => handleOpenEditModal('footer')}
+                          >
+                            <h4>회사 및 사업자 정보</h4>
+                            <p>
+                              상호명: {comp.companyName || "유자품은 오란다&까부리"} | 대표자: {comp.representative || "정귀례"}
+                            </p>
+                            <p>
+                              사업자등록번호: {comp.bizNumber || "566-82-00511"} | 통신판매업신고: {comp.orderReport || "제 2026-전남고흥-0000호"}
+                            </p>
+                            <p>
+                              주소: {comp.address || "전남광주통합특별시 고흥군 고흥읍 봉동주공길 9, 1층"}
+                            </p>
+                            <p>
+                              고객센터: {comp.phone || "061-835-1366"} | 이메일: {comp.email || "nanuri1366@daum.net"}
+                            </p>
+                            <p className="copyright">
+                              {comp.copyright || "© 2026 유자품은 오란다&까부리. All Rights Reserved."}
+                            </p>
                           </div>
                         </div>
-                      );
-                    })()}
-                  </div>
-                </div>
+                      </footer>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -5231,6 +5783,347 @@ export default function AdminDashboard() {
               })}
             </div>
           </div>
+
+        </div>
+      </ModalPopup>
+
+      {/* ==================================================================== */}
+      {/* MODAL 8: TARGETED SINGLE ELEMENT MODAL (요소별 전용 단독 수정 팝업)  */}
+      {/* ==================================================================== */}
+      <ModalPopup
+        isOpen={targetElementModal.isOpen}
+        onClose={() => setTargetElementModal(prev => ({ ...prev, isOpen: false }))}
+        title={targetElementModal.title}
+        subtitle={targetElementModal.desc || "해당 요소만 직관적으로 수정하고 '적용하기'를 누르면 즉시 캔버스에 반영됩니다."}
+        footerActions={
+          <>
+            <button
+              type="button"
+              onClick={() => setTargetElementModal(prev => ({ ...prev, isOpen: false }))}
+              style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #EAE8E3', background: '#FFFFFF', cursor: 'pointer', fontWeight: '600' }}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveElementModal}
+              style={{ padding: '10px 22px', borderRadius: '8px', border: 'none', background: '#2D6A4F', color: '#FFFFFF', cursor: 'pointer', fontWeight: '700' }}
+            >
+              적용하기
+            </button>
+          </>
+        }
+      >
+        <div style={{ padding: '4px 0' }}>
+          {/* 1. Single-line Text */}
+          {targetElementModal.type === 'text' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '8px', color: '#2B2A27' }}>
+                {targetElementModal.title}
+              </label>
+              <input
+                type="text"
+                value={targetElementModal.value || ''}
+                onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: e.target.value }))}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #2D6A4F', fontSize: '14px', outline: 'none' }}
+                autoFocus
+              />
+            </div>
+          )}
+
+          {/* 2. Multi-line Textarea */}
+          {targetElementModal.type === 'textarea' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '8px', color: '#2B2A27' }}>
+                {targetElementModal.title} (Enter로 줄바꿈 가능)
+              </label>
+              <textarea
+                rows={4}
+                value={targetElementModal.value || ''}
+                onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: e.target.value }))}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #2D6A4F', fontSize: '14px', lineHeight: 1.6, outline: 'none' }}
+                autoFocus
+              />
+              <p style={{ fontSize: '12px', color: '#2D6A4F', marginTop: '6px', fontWeight: '600', margin: '6px 0 0 0' }}>
+                💡 Enter 키를 눌러 줄을 바꾸시면 실제 랜딩페이지에도 동일하게 줄바꿈이 반영됩니다.
+              </p>
+            </div>
+          )}
+
+          {/* 3. Image Field */}
+          {targetElementModal.type === 'image' && (
+            <ImageFieldEditor
+              label={targetElementModal.title}
+              value={targetElementModal.value || ''}
+              onChange={(img) => setTargetElementModal(prev => ({ ...prev, value: img }))}
+            />
+          )}
+
+          {/* 4. Link & Button */}
+          {targetElementModal.type === 'link' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>버튼 표시 문구</label>
+                <input
+                  type="text"
+                  value={targetElementModal.value?.ctaText ?? targetElementModal.value?.buttonText ?? targetElementModal.value?.smartStoreText ?? targetElementModal.value?.contactText ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTargetElementModal(prev => {
+                      const v = { ...(prev.value || {}) };
+                      if ('ctaText' in v) v.ctaText = val;
+                      if ('buttonText' in v) v.buttonText = val;
+                      if ('smartStoreText' in v) v.smartStoreText = val;
+                      if ('contactText' in v) v.contactText = val;
+                      if (!('ctaText' in v) && !('buttonText' in v) && !('smartStoreText' in v) && !('contactText' in v)) v.ctaText = val;
+                      return { ...prev, value: v };
+                    });
+                  }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>이동 링크 URL</label>
+                <input
+                  type="text"
+                  value={targetElementModal.value?.ctaLink ?? targetElementModal.value?.buttonLink ?? targetElementModal.value?.smartStoreUrl ?? targetElementModal.value?.contactLink ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTargetElementModal(prev => {
+                      const v = { ...(prev.value || {}) };
+                      if ('ctaLink' in v) v.ctaLink = val;
+                      if ('buttonLink' in v) v.buttonLink = val;
+                      if ('smartStoreUrl' in v) v.smartStoreUrl = val;
+                      if ('contactLink' in v) v.contactLink = val;
+                      if (!('ctaLink' in v) && !('buttonLink' in v) && !('smartStoreUrl' in v) && !('contactLink' in v)) v.ctaLink = val;
+                      return { ...prev, value: v };
+                    });
+                  }}
+                  placeholder="https://smartstore.naver.com/..."
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 5. Product Card Edit */}
+          {targetElementModal.type === 'product-card' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '68vh', overflowY: 'auto', paddingRight: '4px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상품명</label>
+                  <input
+                    type="text"
+                    value={targetElementModal.value?.name || ''}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), name: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>배지 (예: BEST, NEW)</label>
+                  <input
+                    type="text"
+                    value={targetElementModal.value?.badge || ''}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), badge: e.target.value } }))}
+                    placeholder="인기 / 선물용 / NEW"
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상품 한줄 설명</label>
+                <input
+                  type="text"
+                  value={targetElementModal.value?.desc || ''}
+                  onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), desc: e.target.value } }))}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>실제 판매가 (원)</label>
+                  <input
+                    type="number"
+                    value={targetElementModal.value?.price || 0}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), price: Number(e.target.value) } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>정상가 (할인율 표시용)</label>
+                  <input
+                    type="number"
+                    value={targetElementModal.value?.originalPrice || 0}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), originalPrice: Number(e.target.value) } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>포장 단위</label>
+                  <input
+                    type="text"
+                    value={targetElementModal.value?.unit || ''}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), unit: e.target.value } }))}
+                    placeholder="(1박스 20개입)"
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>스마트스토어 상세 페이지 URL</label>
+                <input
+                  type="text"
+                  value={targetElementModal.value?.url || ''}
+                  onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), url: e.target.value } }))}
+                  placeholder="https://smartstore.naver.com/..."
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                />
+              </div>
+              <ImageFieldEditor
+                label="상품 대표 사진"
+                value={targetElementModal.value?.image || ''}
+                onChange={(img) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), image: img } }))}
+              />
+            </div>
+          )}
+
+          {/* 6. Review Card Edit */}
+          {targetElementModal.type === 'review-card' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>고객명</label>
+                  <input
+                    type="text"
+                    value={targetElementModal.value?.author || ''}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), author: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>구매 상품</label>
+                  <input
+                    type="text"
+                    value={targetElementModal.value?.product || ''}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), product: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>별점</label>
+                  <select
+                    value={targetElementModal.value?.stars ?? targetElementModal.value?.rating ?? 5}
+                    onChange={(e) => {
+                      const num = Number(e.target.value);
+                      setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), stars: num, rating: num } }));
+                    }}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  >
+                    {[5, 4, 3, 2, 1].map(r => (
+                      <option key={r} value={r}>★ {r}점</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>배지 태그 (예: 베스트리뷰)</label>
+                <input
+                  type="text"
+                  value={targetElementModal.value?.tag || ''}
+                  onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), tag: e.target.value } }))}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>후기 본문 내용</label>
+                <textarea
+                  rows={3}
+                  value={targetElementModal.value?.text ?? targetElementModal.value?.content ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), text: val, content: val } }));
+                  }}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', lineHeight: 1.5 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 7. Feature Card Edit */}
+          {targetElementModal.type === 'feature-card' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>아이콘</label>
+                  <select
+                    value={targetElementModal.value?.icon || 'Sparkles'}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), icon: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  >
+                    {AVAILABLE_ICON_NAMES.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>특장점 제목</label>
+                  <input
+                    type="text"
+                    value={targetElementModal.value?.title || ''}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), title: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상세 설명</label>
+                <textarea
+                  rows={3}
+                  value={targetElementModal.value?.desc || ''}
+                  onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), desc: e.target.value } }))}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', lineHeight: 1.5 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 8. Story Feature Box Edit */}
+          {targetElementModal.type === 'story-feature-box' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>아이콘</label>
+                  <select
+                    value={targetElementModal.value?.featureIcon || 'Leaf'}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), featureIcon: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  >
+                    {AVAILABLE_ICON_NAMES.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>배지명</label>
+                  <input
+                    type="text"
+                    value={targetElementModal.value?.featureBadge || ''}
+                    onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), featureBadge: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>설명 문구</label>
+                <input
+                  type="text"
+                  value={targetElementModal.value?.featureDesc || ''}
+                  onChange={(e) => setTargetElementModal(prev => ({ ...prev, value: { ...(prev.value || {}), featureDesc: e.target.value } }))}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                />
+              </div>
+            </div>
+          )}
 
         </div>
       </ModalPopup>
