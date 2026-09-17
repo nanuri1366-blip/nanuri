@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, RefreshCw, Inbox, GripVertical, Info } from 'lucide-react';
+import { Search, Filter, RefreshCw, Inbox, GripVertical, Info, Plus } from 'lucide-react';
 
 export default function DataTable({
   title,

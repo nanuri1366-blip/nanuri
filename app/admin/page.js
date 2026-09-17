@@ -848,7 +848,7 @@ export default function AdminDashboard() {
   const handleSaveLanding = async () => {
     const primaryPopup = Array.isArray(landingSettings.popups) && landingSettings.popups.length > 0
       ? landingSettings.popups[0]
-      : (landingSettings.popup || defaultLandingSettings.popup);
+      : (landingSettings.popup || DEFAULT_LANDING_CONFIG.popup);
 
     const payload = {
       ...landingSettings,
