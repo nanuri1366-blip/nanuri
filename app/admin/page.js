@@ -10,6 +10,7 @@ import {
   DEFAULT_LANDING_CONFIG, 
   normalizeLandingSettings, 
   SECTION_TEMPLATES, 
+  createSectionFromTemplate,
   AVAILABLE_ICON_NAMES, 
   DynamicIcon 
 } from '../../lib/landingDefaults';
@@ -53,6 +54,8 @@ import {
   Smartphone,
   Sparkles,
   Star,
+  ShoppingBag,
+  Send,
   Image as ImageIcon,
   FileText,
   X
@@ -186,7 +189,13 @@ export default function AdminDashboard() {
   const [rawMaterials, setRawMaterials] = useState([]);
   const [inventoryLogs, setInventoryLogs] = useState([]);
   const [landingSettings, setLandingSettings] = useState(DEFAULT_LANDING_CONFIG);
+  const [savedLandingSettings, setSavedLandingSettings] = useState(DEFAULT_LANDING_CONFIG);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Check if landing settings have unsaved modifications
+  const isLandingDirty = useMemo(() => {
+    return JSON.stringify(landingSettings) !== JSON.stringify(savedLandingSettings);
+  }, [landingSettings, savedLandingSettings]);
 
   // 3.1 Password Management State
   const [authPasswords, setAuthPasswords] = useState({ admin: 'yuzu1234', producer: 'maker1234' });
@@ -200,6 +209,7 @@ export default function AdminDashboard() {
   // 3.2 Visual Landing Page Editor State
   const [previewDevice, setPreviewDevice] = useState('desktop'); // 'desktop' | 'tablet' | 'mobile'
   const [editingModal, setEditingModal] = useState({ isOpen: false, type: null, targetId: null, data: null });
+  const [sectionListModalOpen, setSectionListModalOpen] = useState(false);
 
   // 4. Modal States
   // 4.1 Order Modal
@@ -246,9 +256,12 @@ export default function AdminDashboard() {
         setAuthPasswords(pwData);
       }
       if (land) {
-        setLandingSettings(normalizeLandingSettings(land));
+        const normalized = normalizeLandingSettings(land);
+        setLandingSettings(normalized);
+        setSavedLandingSettings(JSON.parse(JSON.stringify(normalized)));
       } else {
         setLandingSettings(DEFAULT_LANDING_CONFIG);
+        setSavedLandingSettings(JSON.parse(JSON.stringify(DEFAULT_LANDING_CONFIG)));
       }
 
       if (goodsList && goodsList.length > 0 && !calcSelectedGoodId) {
@@ -374,16 +387,13 @@ export default function AdminDashboard() {
   };
 
   const handleAddSection = (templateType) => {
-    const template = SECTION_TEMPLATES[templateType];
-    if (!template) return;
-    const newId = `sec_${templateType}_${Date.now()}`;
-    const newSec = JSON.parse(JSON.stringify(template));
-    newSec.id = newId;
-    newSec.name = `${template.name} (추가)`;
+    const newSec = createSectionFromTemplate(templateType);
+    if (!newSec) return;
     setLandingSettings(prev => ({
       ...prev,
       sections: [...(prev.sections || []), newSec]
     }));
+    alert(`[${newSec.name}] 섹션이 페이지 맨 아래에 새로 추가되었습니다.`);
   };
 
   const handleDuplicateSection = (secId) => {
@@ -406,12 +416,114 @@ export default function AdminDashboard() {
     }));
   };
 
+  // Card Item Level Handlers (Lineup, Reviews, Features)
+  const handleMoveCard = (secId, cardIdx, direction) => {
+    setLandingSettings(prev => {
+      const sections = (prev.sections || []).map(sec => {
+        if (sec.id !== secId) return sec;
+        const items = [...(sec.data?.items || [])];
+        const targetIdx = cardIdx + direction;
+        if (targetIdx < 0 || targetIdx >= items.length) return sec;
+        const temp = items[cardIdx];
+        items[cardIdx] = items[targetIdx];
+        items[targetIdx] = temp;
+        return { ...sec, data: { ...sec.data, items } };
+      });
+      return { ...prev, sections };
+    });
+  };
+
+  const handleDuplicateCard = (secId, cardIdx) => {
+    setLandingSettings(prev => {
+      const sections = (prev.sections || []).map(sec => {
+        if (sec.id !== secId) return sec;
+        const items = [...(sec.data?.items || [])];
+        const original = items[cardIdx];
+        const copy = JSON.parse(JSON.stringify(original));
+        copy.id = `card_${Date.now()}`;
+        if (copy.name) copy.name = `${copy.name} (사본)`;
+        else if (copy.title) copy.title = `${copy.title} (사본)`;
+        items.splice(cardIdx + 1, 0, copy);
+        return { ...sec, data: { ...sec.data, items } };
+      });
+      return { ...prev, sections };
+    });
+  };
+
+  const handleDeleteCard = (secId, cardIdx) => {
+    if (!confirm('이 카드를 삭제하시겠습니까?')) return;
+    setLandingSettings(prev => {
+      const sections = (prev.sections || []).map(sec => {
+        if (sec.id !== secId) return sec;
+        const items = (sec.data?.items || []).filter((_, i) => i !== cardIdx);
+        return { ...sec, data: { ...sec.data, items } };
+      });
+      return { ...prev, sections };
+    });
+  };
+
+  const handleAddCard = (secId, secType) => {
+    setLandingSettings(prev => {
+      const sections = (prev.sections || []).map(sec => {
+        if (sec.id !== secId) return sec;
+        const items = [...(sec.data?.items || [])];
+        let newCard = {};
+        if (secType === 'lineup') {
+          newCard = {
+            id: `prod_${Date.now()}`,
+            name: "새 상품명",
+            desc: "새 상품에 대한 상세 설명을 입력하세요.",
+            price: 20000,
+            originalPrice: 22000,
+            unit: "(1박스)",
+            badge: "NEW",
+            url: "https://smartstore.naver.com/kkaburioranda",
+            image: ""
+          };
+        } else if (secType === 'reviews') {
+          newCard = {
+            id: `rev_${Date.now()}`,
+            author: "구매 고객",
+            stars: 5,
+            text: "정말 맛있고 부드러워요! 선물용으로도 최고입니다.",
+            product: "유자 오란다",
+            tag: "신규 리뷰"
+          };
+        } else if (secType === 'features') {
+          newCard = {
+            id: `feat_${Date.now()}`,
+            icon: "Sparkles",
+            title: "새 특장점 제목",
+            desc: "특장점 상세 설명을 입력하세요."
+          };
+        }
+        items.push(newCard);
+        return { ...sec, data: { ...sec.data, items } };
+      });
+      return { ...prev, sections };
+    });
+  };
+
   const handleOpenEditModal = (type, targetId = null, initialData = null) => {
     let dataToEdit = null;
     if (type === 'header') {
       dataToEdit = JSON.parse(JSON.stringify(landingSettings.header || DEFAULT_LANDING_CONFIG.header));
     } else if (type === 'footer') {
-      dataToEdit = JSON.parse(JSON.stringify(landingSettings.footer || DEFAULT_LANDING_CONFIG.footer));
+      const footer = landingSettings.footer || DEFAULT_LANDING_CONFIG.footer;
+      const comp = footer.companyInfo || DEFAULT_LANDING_CONFIG.footer.companyInfo;
+      dataToEdit = {
+        brandName: footer.brandName || 'Yuzu Oranda',
+        desc: footer.desc || '바삭함 속에 피어나는 싱그러움. 자연에서 온 유자와 전통 오란다의 맛있는 만남.',
+        companyName: comp.companyName || '유자품은 오란다&까부리',
+        representative: comp.representative || '정귀례',
+        bizNumber: comp.bizNumber || '566-82-00511',
+        orderReport: comp.orderReport || '제 2026-전남고흥-0000호',
+        address: comp.address || '전남광주통합특별시 고흥군 고흥읍 봉동주공길 9, 1층',
+        phone: comp.phone || '061-835-1366',
+        email: comp.email || 'nanuri1366@daum.net',
+        copyright: comp.copyright || '© 2026 유자품은 오란다&까부리. All Rights Reserved.',
+        snsLinks: JSON.parse(JSON.stringify(footer.snsLinks || []))
+      };
     } else if (type === 'popups') {
       dataToEdit = JSON.parse(JSON.stringify(landingSettings.popups || []));
     } else if (targetId) {
@@ -440,7 +552,25 @@ export default function AdminDashboard() {
         return { ...prev, header: data };
       }
       if (type === 'footer') {
-        return { ...prev, footer: data };
+        const companyInfo = {
+          companyName: data.companyName || '유자품은 오란다&까부리',
+          representative: data.representative || '정귀례',
+          bizNumber: data.bizNumber || '566-82-00511',
+          orderReport: data.orderReport || '제 2026-전남고흥-0000호',
+          address: data.address || '전남광주통합특별시 고흥군 고흥읍 봉동주공길 9, 1층',
+          phone: data.phone || '061-835-1366',
+          email: data.email || 'nanuri1366@daum.net',
+          copyright: data.copyright || '© 2026 유자품은 오란다&까부리. All Rights Reserved.'
+        };
+        return {
+          ...prev,
+          footer: {
+            brandName: data.brandName || 'Yuzu Oranda',
+            desc: data.desc || '바삭함 속에 피어나는 싱그러움. 자연에서 온 유자와 전통 오란다의 맛있는 만남.',
+            snsLinks: data.snsLinks || [],
+            companyInfo
+          }
+        };
       }
       if (type === 'popups') {
         return { ...prev, popups: data, popup: data[0] || null };
@@ -843,19 +973,58 @@ export default function AdminDashboard() {
   };
 
   // --------------------------------------------------------------------------
-  // LANDING SETTINGS SAVE
+  // LANDING SETTINGS HELPERS & SAVE
   // --------------------------------------------------------------------------
-  const handleSaveLanding = async () => {
-    const primaryPopup = Array.isArray(landingSettings.popups) && landingSettings.popups.length > 0
-      ? landingSettings.popups[0]
-      : (landingSettings.popup || DEFAULT_LANDING_CONFIG.popup);
+  const updateSectionData = (secId, field, value) => {
+    setLandingSettings(prev => ({
+      ...prev,
+      sections: (prev.sections || []).map(s => {
+        if (s.id !== secId) return s;
+        return {
+          ...s,
+          data: { ...(s.data || {}), [field]: value }
+        };
+      })
+    }));
+  };
 
-    const payload = {
-      ...landingSettings,
-      popup: primaryPopup
-    };
-    await supabase.updateLandingSettings(payload);
-    alert('랜딩페이지 설정이 저장되었습니다.');
+  const updateSectionMeta = (secId, updates) => {
+    setLandingSettings(prev => ({
+      ...prev,
+      sections: (prev.sections || []).map(s => {
+        if (s.id !== secId) return s;
+        return { ...s, ...updates };
+      })
+    }));
+  };
+
+  const handleSaveLanding = async () => {
+    if (!isLandingDirty) return;
+    setIsRefreshing(true);
+    try {
+      const primaryPopup = Array.isArray(landingSettings.popups) && landingSettings.popups.length > 0
+        ? landingSettings.popups[0]
+        : (landingSettings.popup || DEFAULT_LANDING_CONFIG.popup);
+
+      const payload = {
+        ...landingSettings,
+        popup: primaryPopup
+      };
+      await supabase.updateLandingSettings(payload);
+      setSavedLandingSettings(JSON.parse(JSON.stringify(payload)));
+      alert('랜딩페이지 설정이 안전하게 DB에 저장되었습니다.');
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleRestoreLandingDefaults = () => {
+    if (confirm('랜딩페이지 설정을 초기 기본값으로 복원하시겠습니까?\n저장하지 않은 모든 수정사항은 삭제됩니다.')) {
+      setLandingSettings(JSON.parse(JSON.stringify(DEFAULT_LANDING_CONFIG)));
+    }
   };
 
   // 1. Gate Screen
@@ -1782,115 +1951,84 @@ export default function AdminDashboard() {
         )}
 
         {/* ==================================================================== */}
-        {/* SUB TAB: LANDING VISUAL EDITOR (워드프레스형 실시간 비주얼 에디터)     */}
+        {/* SUB TAB: LANDING VISUAL EDITOR (100% 전체 너비 실시간 비주얼 에디터)  */}
         {/* ==================================================================== */}
         {activeTab === 'landing' && (
-          <div className="landing-editor-container">
-            {/* Top Toolbar */}
-            <div className="editor-top-bar" style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: '#FFFFFF',
-              borderRadius: '14px',
-              padding: '16px 24px',
-              border: '1px solid #EAE8E3',
-              marginBottom: '20px',
-              flexWrap: 'wrap',
-              gap: '14px'
-            }}>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#2B2A27', margin: 0 }}>
-                  랜딩페이지 실시간 비주얼 에디터
+          <div className="visual-editor-container">
+            {/* 1. Global Sticky Top Toolbar */}
+            <div className="editor-top-bar">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#2B2A27', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Globe size={20} color="#2D6A4F" />
+                  <span>랜딩페이지 비주얼 에디터</span>
                 </h2>
-                <p style={{ fontSize: '13px', color: '#6B6862', margin: '3px 0 0 0' }}>
-                  좌측에서 섹션 순서와 구성을 관리하고, 우측 캔버스의 요소를 클릭해 텍스트와 사진을 실시간으로 수정하세요.
-                </p>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                  backgroundColor: isLandingDirty ? '#FDE8E8' : '#D8F3DC',
+                  color: isLandingDirty ? '#C0392B' : '#2D6A4F',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  {isLandingDirty ? '● 수정 사항 있음 (저장 필요)' : '✓ 최신 저장 완료'}
+                </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                {/* Device Selector */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: '#FAF6EE',
-                  border: '1px solid #EAE8E3',
-                  borderRadius: '8px',
-                  padding: '3px',
-                  gap: '2px'
-                }}>
-                  {[
-                    { id: 'desktop', label: 'PC', icon: Monitor },
-                    { id: 'tablet', label: '태블릿', icon: Tablet },
-                    { id: 'mobile', label: '모바일', icon: Smartphone }
-                  ].map(dev => {
-                    const IconCmp = dev.icon;
-                    const isActive = previewDevice === dev.id;
-                    return (
-                      <button
-                        key={dev.id}
-                        type="button"
-                        onClick={() => setPreviewDevice(dev.id)}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          padding: '6px 10px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          backgroundColor: isActive ? '#2D6A4F' : 'transparent',
-                          color: isActive ? '#FFFFFF' : '#6B6862',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <IconCmp size={14} />
-                        <span>{dev.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* Device Selector */}
+              <div className="editor-device-switch">
+                {[
+                  { id: 'desktop', label: 'PC', icon: Monitor },
+                  { id: 'tablet', label: '태블릿', icon: Tablet },
+                  { id: 'mobile', label: '모바일', icon: Smartphone }
+                ].map(dev => {
+                  const IconCmp = dev.icon;
+                  const isActive = previewDevice === dev.id;
+                  return (
+                    <button
+                      key={dev.id}
+                      type="button"
+                      onClick={() => setPreviewDevice(dev.id)}
+                      className={`editor-device-btn ${isActive ? 'active' : ''}`}
+                    >
+                      <IconCmp size={14} />
+                      <span>{dev.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-                {/* Quick Global Editors */}
+              {/* Action Buttons */}
+              <div className="editor-top-actions">
+                {/* Section Manager Modal Button */}
+                <button
+                  type="button"
+                  onClick={() => setSectionListModalOpen(true)}
+                  className="editor-action-btn primary"
+                  title="섹션 목록, 순서 변경 및 새 섹션 추가 팝업"
+                >
+                  <Layers size={14} />
+                  <span>섹션 목록 / 추가</span>
+                  <span style={{ backgroundColor: 'rgba(255,255,255,0.25)', padding: '1px 6px', borderRadius: '10px', fontSize: '10px' }}>
+                    {(landingSettings.sections || []).length}
+                  </span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleOpenEditModal('popups')}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #EAE8E3',
-                    backgroundColor: '#FFFFFF',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    color: '#2B2A27',
-                    cursor: 'pointer'
-                  }}
+                  className="editor-action-btn"
                 >
                   <Sliders size={14} color="#D97706" />
-                  <span>공지 팝업 관리</span>
+                  <span>공지 팝업</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleOpenEditModal('header')}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #EAE8E3',
-                    backgroundColor: '#FFFFFF',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    color: '#2B2A27',
-                    cursor: 'pointer'
-                  }}
+                  className="editor-action-btn"
                 >
                   <Settings size={14} color="#2563EB" />
                   <span>상단 메뉴/GNB</span>
@@ -1899,610 +2037,730 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => handleOpenEditModal('footer')}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #EAE8E3',
-                    backgroundColor: '#FFFFFF',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    color: '#2B2A27',
-                    cursor: 'pointer'
-                  }}
+                  className="editor-action-btn"
                 >
                   <Globe size={14} color="#059669" />
-                  <span>푸터/SNS</span>
+                  <span>푸터/사업자 정보</span>
                 </button>
 
+                {/* Restore Defaults */}
+                <button
+                  type="button"
+                  onClick={handleRestoreLandingDefaults}
+                  className="btn-restore-landing"
+                  title="초기 기본 레이아웃으로 복원"
+                >
+                  <RotateCw size={13} />
+                  <span>초기값 복원</span>
+                </button>
+
+                {/* Save Button (Dirty state enabled only) */}
                 <button
                   type="button"
                   onClick={handleSaveLanding}
-                  disabled={isRefreshing}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: '#2D6A4F',
-                    color: '#FFFFFF',
-                    fontSize: '13px',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(45, 106, 79, 0.25)'
-                  }}
+                  disabled={!isLandingDirty || isRefreshing}
+                  className={`btn-save-landing ${isLandingDirty ? 'dirty' : 'clean'}`}
+                  title={isLandingDirty ? "변경사항을 DB에 저장합니다." : "수정된 내용이 없습니다."}
                 >
                   <Save size={15} />
-                  <span>랜딩 설정 최종 저장</span>
+                  <span>{isRefreshing ? '저장 중...' : '전체 저장'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Split Layout: Left Control Panel + Right Canvas */}
-            <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '20px', alignItems: 'start' }}>
-              
-              {/* Left Panel: Section Structure & Order */}
-              <div style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: '14px',
-                border: '1px solid #EAE8E3',
-                padding: '18px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Layers size={17} color="#2D6A4F" />
-                    <strong style={{ fontSize: '15px', color: '#2B2A27' }}>섹션 목록 및 순서</strong>
-                  </div>
-                  <span style={{ fontSize: '12px', color: '#8C8983', fontWeight: '700' }}>
-                    총 {(landingSettings.sections || []).length}개
-                  </span>
-                </div>
-
-                <p style={{ fontSize: '12px', color: '#6B6862', margin: '0 0 14px 0', lineHeight: 1.4 }}>
-                  ▲ / ▼ 버튼으로 섹션 순서를 바꾸고, 눈 아이콘으로 표시 여부를 즉시 토글할 수 있습니다.
-                </p>
-
-                {/* Section List */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                  {(landingSettings.sections || []).map((sec, idx) => {
-                    return (
-                      <div
-                        key={sec.id}
-                        style={{
-                          border: sec.enabled ? '1.5px solid #D6D3CC' : '1px dashed #D6D3CC',
-                          borderRadius: '10px',
-                          padding: '12px',
-                          backgroundColor: sec.enabled ? '#FFFFFF' : '#FAF9F6',
-                          opacity: sec.enabled ? 1 : 0.65,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{
-                              fontSize: '11px',
-                              fontWeight: '800',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              backgroundColor: '#EAE8E3',
-                              color: '#4A4844',
-                              textTransform: 'uppercase'
-                            }}>
-                              {sec.type}
-                            </span>
-                            <strong style={{ fontSize: '13px', color: '#2B2A27' }}>
-                              {sec.name}
-                            </strong>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            {/* Up / Down */}
-                            <button
-                              type="button"
-                              onClick={() => handleMoveSection(idx, -1)}
-                              disabled={idx === 0}
-                              style={{
-                                border: '1px solid #EAE8E3',
-                                background: '#FFFFFF',
-                                borderRadius: '4px',
-                                padding: '3px 5px',
-                                cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                                color: idx === 0 ? '#CCC' : '#333'
-                              }}
-                              title="위로 이동"
-                            >
-                              <ChevronUp size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveSection(idx, 1)}
-                              disabled={idx === (landingSettings.sections || []).length - 1}
-                              style={{
-                                border: '1px solid #EAE8E3',
-                                background: '#FFFFFF',
-                                borderRadius: '4px',
-                                padding: '3px 5px',
-                                cursor: idx === (landingSettings.sections || []).length - 1 ? 'not-allowed' : 'pointer',
-                                color: idx === (landingSettings.sections || []).length - 1 ? '#CCC' : '#333'
-                              }}
-                              title="아래로 이동"
-                            >
-                              <ChevronDown size={13} />
-                            </button>
-
-                            {/* Visibility Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => handleToggleSectionVisibility(sec.id)}
-                              style={{
-                                border: '1px solid #EAE8E3',
-                                background: sec.enabled ? '#D8F3DC' : '#FFFFFF',
-                                color: sec.enabled ? '#2D6A4F' : '#999',
-                                borderRadius: '4px',
-                                padding: '3px 5px',
-                                cursor: 'pointer'
-                              }}
-                              title={sec.enabled ? "화면에서 숨기기" : "화면에 노출하기"}
-                            >
-                              {sec.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
-                            </button>
-
-                            {/* Duplicate */}
-                            <button
-                              type="button"
-                              onClick={() => handleDuplicateSection(sec.id)}
-                              style={{
-                                border: '1px solid #EAE8E3',
-                                background: '#FFFFFF',
-                                color: '#4A4844',
-                                borderRadius: '4px',
-                                padding: '3px 5px',
-                                cursor: 'pointer'
-                              }}
-                              title="이 섹션 복제하기"
-                            >
-                              <Copy size={13} />
-                            </button>
-
-                            {/* Delete */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteSection(sec.id)}
-                              style={{
-                                border: '1px solid #EAE8E3',
-                                background: '#FFFFFF',
-                                color: '#C0392B',
-                                borderRadius: '4px',
-                                padding: '3px 5px',
-                                cursor: 'pointer'
-                              }}
-                              title="이 섹션 삭제하기"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Quick edit button & GNB link info */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#6B6862', paddingTop: '6px', borderTop: '1px solid #F0EFEA' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <span>앵커: <code>#{sec.anchor || sec.id}</code></span>
-                            {sec.showInNav && (
-                              <span style={{ backgroundColor: '#FAF6EE', padding: '1px 5px', borderRadius: '4px', color: '#8C6F3E', fontWeight: '700' }}>
-                                GNB: {sec.navLabel || sec.name}
-                              </span>
-                            )}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(sec.type, sec.id)}
-                            style={{
-                              border: 'none',
-                              backgroundColor: '#FAF6EE',
-                              color: '#2D6A4F',
-                              fontWeight: '700',
-                              padding: '3px 8px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px'
-                            }}
-                          >
-                            <Edit3 size={11} /> <span>수정</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Add New Section */}
-                <div style={{ borderTop: '1px solid #EAE8E3', paddingTop: '14px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#2B2A27', marginBottom: '8px' }}>
-                    + 새 섹션 추가하기
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                    {[
-                      { type: 'hero', label: '히어로 (Hero)' },
-                      { type: 'story', label: '스토리 (Story)' },
-                      { type: 'features', label: '특장점 (Features)' },
-                      { type: 'lineup', label: '제품 (Lineup)' },
-                      { type: 'reviews', label: '후기 (Reviews)' },
-                      { type: 'cta', label: '배너 (CTA)' }
-                    ].map(tmpl => (
-                      <button
-                        key={tmpl.type}
-                        type="button"
-                        onClick={() => handleAddSection(tmpl.type)}
-                        style={{
-                          padding: '7px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #EAE8E3',
-                          backgroundColor: '#FAF9F6',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          color: '#2B2A27',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        }}
-                      >
-                        + {tmpl.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Panel: Interactive Canvas */}
-              <div style={{
-                backgroundColor: '#262624',
-                borderRadius: '14px',
-                padding: '24px 16px',
-                minHeight: '800px',
-                boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.3)',
-                overflowX: 'auto'
-              }}>
-                <div style={{
-                  maxWidth: previewDevice === 'desktop' ? '100%' : (previewDevice === 'tablet' ? '768px' : '390px'),
-                  margin: '0 auto',
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: previewDevice === 'desktop' ? '8px' : '24px',
-                  border: previewDevice === 'desktop' ? '1px solid #EAE8E3' : '8px solid #3B3936',
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}>
-                  {/* Canvas Header */}
-                  <div style={{
-                    padding: '16px 20px',
+            {/* 2. 100% Full-Width Interactive Live Stage */}
+            <div className="editor-canvas-stage">
+              <div className={`preview-frame ${previewDevice}`}>
+                
+                {/* 2.1 Live GNB Header */}
+                <div 
+                  className="canvas-section-box"
+                  style={{
+                    padding: '16px 24px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     borderBottom: '1px solid #EAE8E3',
-                    backgroundColor: '#FFFFFF',
-                    position: 'relative'
-                  }} className="canvas-section-hover">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '18px', fontWeight: '900', color: '#E8A317' }}>
-                        {landingSettings.header?.logoTextEn || 'Yuzu'}
-                      </span>
-                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#2B2A27' }}>
-                        {landingSettings.header?.logoTextKo || '유자품은 오란다&까부리'}
-                      </span>
-                    </div>
+                    backgroundColor: '#FFFFFF'
+                  }}
+                >
+                  <div className="section-floating-tag">
+                    <span>헤더 및 상단 메뉴</span>
+                  </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <nav style={{ display: previewDevice === 'mobile' ? 'none' : 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: '#6B6862' }}>
-                        {(landingSettings.sections || []).filter(s => s.enabled && s.showInNav).map(s => (
-                          <span key={s.id} style={{ cursor: 'pointer' }}>{s.navLabel || s.name}</span>
-                        ))}
-                      </nav>
-
-                      {landingSettings.header?.showSmartStoreBtn !== false && (
-                        <span style={{
-                          backgroundColor: '#2D6A4F',
-                          color: '#FFFFFF',
-                          padding: '6px 12px',
-                          borderRadius: '20px',
-                          fontSize: '11px',
-                          fontWeight: '700'
-                        }}>
-                          {landingSettings.header?.smartStoreText || '구매하기'}
-                        </span>
-                      )}
-                    </div>
-
+                  <div className="section-floating-toolbar">
                     <button
                       type="button"
+                      className="sec-tool-btn primary"
                       onClick={() => handleOpenEditModal('header')}
-                      className="canvas-edit-overlay-btn"
+                      title="헤더 로고 및 GNB 메뉴 수정"
                     >
-                      <Edit3 size={13} /> <span>헤더/메뉴 편집</span>
+                      <Settings size={12} /> <span>헤더 설정</span>
                     </button>
                   </div>
 
-                  {/* Canvas Sections Rendering */}
-                  {(landingSettings.sections || []).filter(sec => sec.enabled).map((sec) => {
-                    const data = sec.data || {};
+                  {/* Logo */}
+                  <div 
+                    onClick={() => handleOpenEditModal('header')}
+                    className="el-hover-target"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px', cursor: 'pointer' }}
+                  >
+                    <span style={{ fontSize: '19px', fontWeight: '900', color: '#E8A317' }}>
+                      {landingSettings.header?.logoTextEn || 'Yuzu'}
+                    </span>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#2B2A27' }}>
+                      {landingSettings.header?.logoTextKo || '유자품은 오란다&까부리'}
+                    </span>
+                  </div>
 
-                    if (sec.type === 'hero') {
-                      return (
-                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '60px 24px', backgroundColor: '#FAF9F6', textAlign: 'center', borderBottom: '1px solid #EAE8E3' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal('hero', sec.id)}
-                            className="canvas-edit-overlay-btn"
-                          >
-                            <Edit3 size={13} /> <span>Hero 편집</span>
-                          </button>
+                  {/* Nav links & CTA button */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <nav style={{ display: previewDevice === 'mobile' ? 'none' : 'flex', alignItems: 'center', gap: '14px', fontSize: '13px', color: '#6B6862' }}>
+                      {(landingSettings.sections || []).filter(s => s.enabled && s.showInNav).map(s => (
+                        <span 
+                          key={s.id} 
+                          onClick={() => handleOpenEditModal(s.type, s.id)}
+                          style={{ cursor: 'pointer', fontWeight: '600' }}
+                          title="클릭하여 해당 섹션 설정"
+                        >
+                          {s.navLabel || s.name}
+                        </span>
+                      ))}
+                    </nav>
 
+                    {landingSettings.header?.showSmartStoreBtn !== false && (
+                      <span 
+                        onClick={() => handleOpenEditModal('header')}
+                        className="el-hover-target"
+                        style={{
+                          backgroundColor: '#2D6A4F',
+                          color: '#FFFFFF',
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {landingSettings.header?.smartStoreText || '구매하기'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2.2 Dynamic Sections */}
+                {(landingSettings.sections || []).map((sec, idx) => {
+                  if (!sec.enabled) return null;
+                  const data = sec.data || {};
+
+                  return (
+                    <div 
+                      key={sec.id} 
+                      className="canvas-section-box"
+                      style={{ borderBottom: '1px solid #EAE8E3' }}
+                    >
+                      {/* Floating Section Tag */}
+                      <div className="section-floating-tag">
+                        <span>🏷️ {sec.name}</span>
+                        <span style={{ opacity: 0.65 }}>#{sec.anchor || sec.id}</span>
+                      </div>
+
+                      {/* Floating Section Toolbar (Attached directly to each section) */}
+                      <div className="section-floating-toolbar">
+                        <button
+                          type="button"
+                          className="sec-tool-btn"
+                          onClick={() => handleMoveSection(idx, -1)}
+                          disabled={idx === 0}
+                          title="섹션 위로 이동"
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="sec-tool-btn"
+                          onClick={() => handleMoveSection(idx, 1)}
+                          disabled={idx === (landingSettings.sections || []).length - 1}
+                          title="섹션 아래로 이동"
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="sec-tool-btn"
+                          onClick={() => handleToggleSectionVisibility(sec.id)}
+                          title="섹션 화면에서 숨기기"
+                        >
+                          <EyeOff size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="sec-tool-btn"
+                          onClick={() => handleDuplicateSection(sec.id)}
+                          title="섹션 복제"
+                        >
+                          <Copy size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="sec-tool-btn danger"
+                          onClick={() => handleDeleteSection(sec.id)}
+                          title="섹션 삭제"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="sec-tool-btn primary"
+                          onClick={() => handleOpenEditModal(sec.type, sec.id)}
+                          title="섹션 전체 내용 및 앵커 설정"
+                        >
+                          <Settings size={13} /> <span>섹션 설정</span>
+                        </button>
+                      </div>
+
+                      {/* 1. HERO SECTION */}
+                      {sec.type === 'hero' && (
+                        <div style={{ padding: '60px 24px', backgroundColor: '#FAF9F6', textAlign: 'center' }}>
                           {data.badge && (
-                            <span style={{ display: 'inline-block', backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3', color: '#8C6F3E', padding: '4px 12px', borderRadius: '16px', fontSize: '11px', fontWeight: '800', marginBottom: '14px' }}>
-                              {data.badge}
-                            </span>
+                            <div 
+                              onClick={() => handleOpenEditModal('hero', sec.id)}
+                              className="el-hover-target"
+                              style={{ display: 'inline-block', marginBottom: '14px', cursor: 'pointer' }}
+                            >
+                              <span style={{ backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3', color: '#8C6F3E', padding: '4px 14px', borderRadius: '16px', fontSize: '11px', fontWeight: '800' }}>
+                                {data.badge}
+                              </span>
+                            </div>
                           )}
 
-                          <h1 style={{ fontSize: previewDevice === 'mobile' ? '24px' : '36px', fontWeight: '900', color: '#2B2A27', margin: '0 0 16px 0', lineHeight: 1.35, whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                            {data.title || '바삭함 속에 피어나는\n싱그러운 유자 향'}
-                          </h1>
+                          <div 
+                            onClick={() => handleOpenEditModal('hero', sec.id)}
+                            className="el-hover-target"
+                            style={{ cursor: 'pointer', maxWidth: '800px', margin: '0 auto 14px auto' }}
+                          >
+                            <h1 style={{
+                              fontSize: previewDevice === 'mobile' ? '24px' : '36px',
+                              fontWeight: '900',
+                              color: '#2B2A27',
+                              lineHeight: 1.35,
+                              whiteSpace: 'pre-line',
+                              wordBreak: 'keep-all',
+                              margin: 0
+                            }}>
+                              {data.title || '새로운 오란다의 시작'}
+                            </h1>
+                          </div>
 
-                          <p style={{ fontSize: previewDevice === 'mobile' ? '13px' : '15px', color: '#6B6862', maxWidth: '600px', margin: '0 auto 24px auto', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                            {data.subtitle || '100% 국산 유자와 쌀조청의 조화'}
-                          </p>
+                          {data.subtitle && (
+                            <div 
+                              onClick={() => handleOpenEditModal('hero', sec.id)}
+                              className="el-hover-target"
+                              style={{ cursor: 'pointer', maxWidth: '640px', margin: '0 auto 24px auto' }}
+                            >
+                              <p style={{
+                                fontSize: previewDevice === 'mobile' ? '13px' : '15px',
+                                color: '#6B6862',
+                                lineHeight: 1.6,
+                                whiteSpace: 'pre-line',
+                                wordBreak: 'keep-all',
+                                margin: 0
+                              }}>
+                                {data.subtitle}
+                              </p>
+                            </div>
+                          )}
 
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '28px', flexWrap: 'wrap' }}>
-                            <span style={{ backgroundColor: '#2D6A4F', color: '#FFFFFF', padding: '10px 22px', borderRadius: '24px', fontSize: '13px', fontWeight: '800' }}>
-                              {data.ctaText || '스마트스토어로 구매하기'}
-                            </span>
+                          {/* CTA Buttons */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '32px' }}>
+                            {data.ctaText && (
+                              <span 
+                                onClick={() => handleOpenEditModal('hero', sec.id)}
+                                className="el-hover-target"
+                                style={{
+                                  backgroundColor: '#FFAA00',
+                                  color: '#2B2A27',
+                                  padding: '12px 26px',
+                                  borderRadius: '30px',
+                                  fontWeight: '800',
+                                  fontSize: '14px',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 4px 14px rgba(255,170,0,0.3)'
+                                }}
+                              >
+                                {data.ctaText} →
+                              </span>
+                            )}
                             {data.storyLinkText && (
-                              <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAE8E3', color: '#2B2A27', padding: '10px 18px', borderRadius: '24px', fontSize: '13px', fontWeight: '700' }}>
+                              <span 
+                                onClick={() => handleOpenEditModal('hero', sec.id)}
+                                className="el-hover-target"
+                                style={{
+                                  backgroundColor: '#FFFFFF',
+                                  border: '1px solid #D6D3CC',
+                                  color: '#2B2A27',
+                                  padding: '12px 22px',
+                                  borderRadius: '30px',
+                                  fontWeight: '700',
+                                  fontSize: '14px',
+                                  cursor: 'pointer'
+                                }}
+                              >
                                 {data.storyLinkText}
                               </span>
                             )}
                           </div>
 
-                          {data.image && (
-                            <div style={{ maxWidth: '400px', margin: '0 auto', borderRadius: '12px', overflow: 'hidden', border: '1px solid #EAE8E3' }}>
-                              <img src={data.image} alt="Hero" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    if (sec.type === 'story') {
-                      return (
-                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '50px 24px', backgroundColor: '#FFFFFF', borderBottom: '1px solid #EAE8E3' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal('story', sec.id)}
-                            className="canvas-edit-overlay-btn"
+                          {/* Hero Image */}
+                          <div 
+                            onClick={() => handleOpenEditModal('hero', sec.id)}
+                            className="el-hover-target"
+                            style={{
+                              maxWidth: '680px',
+                              margin: '0 auto',
+                              borderRadius: '16px',
+                              overflow: 'hidden',
+                              boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
+                              cursor: 'pointer'
+                            }}
                           >
-                            <Edit3 size={13} /> <span>Story 편집</span>
-                          </button>
+                            {data.image ? (
+                              <img src={data.image} alt="Hero" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                            ) : (
+                              <div style={{ padding: '60px 20px', backgroundColor: '#EDEAE4', color: '#8C8983', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                <ImageIcon size={36} />
+                                <span>대표 이미지를 등록해 주세요</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
-                          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'grid', gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : '1fr 1fr', gap: '30px', alignItems: 'center' }}>
-                            <div>
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                      {/* 2. STORY SECTION */}
+                      {sec.type === 'story' && (
+                        <div style={{ padding: '60px 24px', backgroundColor: '#FFFFFF' }}>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : '1fr 1fr',
+                            gap: '32px',
+                            maxWidth: '960px',
+                            margin: '0 auto',
+                            alignItems: 'center'
+                          }}>
+                            {/* Image */}
+                            <div 
+                              onClick={() => handleOpenEditModal('story', sec.id)}
+                              className="el-hover-target"
+                              style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', cursor: 'pointer' }}
+                            >
+                              {data.image ? (
+                                <img src={data.image} alt="Story" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                              ) : (
+                                <div style={{ height: '280px', backgroundColor: '#EDEAE4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#8C8983', gap: '8px' }}>
+                                  <ImageIcon size={36} />
+                                  <span>스토리 사진 등록</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Story Texts */}
+                            <div 
+                              onClick={() => handleOpenEditModal('story', sec.id)}
+                              className="el-hover-target"
+                              style={{ cursor: 'pointer', padding: '8px' }}
+                            >
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
                                 {data.subtitle || 'BRAND STORY'}
                               </span>
-                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '28px', fontWeight: '900', color: '#2B2A27', margin: '8px 0 14px 0', lineHeight: 1.35, whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                                {data.title || '자연에서 온 상큼함과\n전통의 만남'}
+                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '8px 0 16px 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                                {data.title || '자연에서 온 상큼함'}
                               </h2>
-                              <strong style={{ display: 'block', fontSize: '14px', color: '#2D6A4F', marginBottom: '10px' }}>
-                                {data.sectionTitle || '딱딱하고 끈적이는 오란다는 잊으세요.'}
-                              </strong>
-                              <p style={{ fontSize: '13px', color: '#6B6862', lineHeight: 1.6, marginBottom: '10px', wordBreak: 'keep-all' }}>
+                              {data.sectionTitle && (
+                                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#2D6A4F', margin: '0 0 12px 0', wordBreak: 'keep-all' }}>
+                                  {data.sectionTitle}
+                                </h3>
+                              )}
+                              <p style={{ fontSize: '13px', color: '#6B6862', lineHeight: 1.65, margin: '0 0 10px 0', wordBreak: 'keep-all' }}>
                                 {data.body1}
                               </p>
-                              <p style={{ fontSize: '13px', color: '#6B6862', lineHeight: 1.6, marginBottom: '16px', wordBreak: 'keep-all' }}>
-                                {data.body2}
-                              </p>
+                              {data.body2 && (
+                                <p style={{ fontSize: '13px', color: '#6B6862', lineHeight: 1.65, margin: '0 0 18px 0', wordBreak: 'keep-all' }}>
+                                  {data.body2}
+                                </p>
+                              )}
 
                               {data.featureBadge && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', backgroundColor: '#FAF6EE', borderRadius: '8px', border: '1px solid #EAE8E3' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3' }}>
                                   <DynamicIcon name={data.featureIcon || 'Leaf'} size={20} color="#2D6A4F" />
                                   <div>
-                                    <strong style={{ display: 'block', fontSize: '12px', color: '#2B2A27' }}>{data.featureBadge}</strong>
+                                    <strong style={{ fontSize: '12px', color: '#2B2A27', display: 'block' }}>{data.featureBadge}</strong>
                                     <span style={{ fontSize: '11px', color: '#6B6862' }}>{data.featureDesc}</span>
                                   </div>
                                 </div>
                               )}
                             </div>
-
-                            {data.image && (
-                              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #EAE8E3' }}>
-                                <img src={data.image} alt="Story" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                              </div>
-                            )}
                           </div>
                         </div>
-                      );
-                    }
+                      )}
 
-                    if (sec.type === 'features') {
-                      const items = Array.isArray(data.items) ? data.items : [];
-                      return (
-                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '50px 24px', backgroundColor: '#FAF9F6', borderBottom: '1px solid #EAE8E3' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal('features', sec.id)}
-                            className="canvas-edit-overlay-btn"
-                          >
-                            <Edit3 size={13} /> <span>특장점 편집</span>
-                          </button>
+                      {/* 3. FEATURES SECTION */}
+                      {sec.type === 'features' && (() => {
+                        const items = Array.isArray(data.items) ? data.items : [];
+                        return (
+                          <div style={{ padding: '60px 24px', backgroundColor: '#FAF9F6' }}>
+                            <div 
+                              onClick={() => handleOpenEditModal('features', sec.id)}
+                              className="el-hover-target"
+                              style={{ textAlign: 'center', marginBottom: '32px', cursor: 'pointer', maxWidth: '600px', margin: '0 auto 32px auto' }}
+                            >
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
+                                {data.subtitle || 'KEY FEATURES'}
+                              </span>
+                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                                {data.title || '핵심 특장점'}
+                              </h2>
+                            </div>
 
-                          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
-                              {data.subtitle || 'KEY FEATURES'}
-                            </span>
-                            <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                              {data.title || '유자품은 오란다&까부리의 약속'}
-                            </h2>
-                          </div>
-
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : `repeat(${Math.min(items.length || 3, 3)}, 1fr)`,
-                            gap: '16px',
-                            maxWidth: '900px',
-                            margin: '0 auto'
-                          }}>
-                            {items.map((it, idx) => (
-                              <div key={it.id || idx} style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #EAE8E3', textAlign: 'center' }}>
-                                <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
-                                  <DynamicIcon name={it.icon || 'Sparkles'} size={20} color="#2D6A4F" />
-                                </div>
-                                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#2B2A27', margin: '0 0 8px 0', wordBreak: 'keep-all' }}>
-                                  {it.title}
-                                </h3>
-                                <p style={{ fontSize: '12px', color: '#6B6862', lineHeight: 1.5, margin: 0, wordBreak: 'keep-all' }}>
-                                  {it.desc}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    if (sec.type === 'lineup') {
-                      const items = Array.isArray(data.items) ? data.items : [];
-                      return (
-                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '50px 24px', backgroundColor: '#FFFFFF', borderBottom: '1px solid #EAE8E3' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal('lineup', sec.id)}
-                            className="canvas-edit-overlay-btn"
-                          >
-                            <Edit3 size={13} /> <span>라인업 편집</span>
-                          </button>
-
-                          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
-                              {data.subtitle || 'PRODUCT LINEUP'}
-                            </span>
-                            <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                              {data.title || '상큼함을 담은 라인업'}
-                            </h2>
-                          </div>
-
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
-                            gap: '16px',
-                            maxWidth: '960px',
-                            margin: '0 auto'
-                          }}>
-                            {items.map((prod, idx) => (
-                              <div key={prod.id || idx} style={{ border: '1px solid #EAE8E3', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ height: '160px', backgroundColor: '#FAF9F6', overflow: 'hidden', position: 'relative' }}>
-                                  {prod.image ? (
-                                    <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                  ) : (
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '12px' }}>이미지 없음</div>
-                                  )}
-                                  {prod.badge && (
-                                    <span style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: '#2D6A4F', color: '#FFFFFF', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>
-                                      {prod.badge}
-                                    </span>
-                                  )}
-                                </div>
-                                <div style={{ padding: '14px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                                  <div>
-                                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#2B2A27', margin: '0 0 4px 0', wordBreak: 'keep-all' }}>{prod.name}</h4>
-                                    <p style={{ fontSize: '11px', color: '#6B6862', margin: '0 0 8px 0', lineHeight: 1.4, wordBreak: 'keep-all' }}>{prod.desc}</p>
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : `repeat(${Math.min(items.length || 3, 3)}, 1fr)`,
+                              gap: '16px',
+                              maxWidth: '960px',
+                              margin: '0 auto 20px auto'
+                            }}>
+                              {items.map((it, i) => (
+                                <div 
+                                  key={it.id || i} 
+                                  className="card-hover-box"
+                                  style={{ backgroundColor: '#FFFFFF', padding: '22px 18px', borderRadius: '12px', border: '1px solid #EAE8E3', textAlign: 'center' }}
+                                >
+                                  {/* Card Actions Toolbar */}
+                                  <div className="card-item-toolbar">
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn edit"
+                                      onClick={() => handleOpenEditModal('features', sec.id)}
+                                      title="카드 수정"
+                                    >
+                                      <Edit3 size={11} /> <span>수정</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleMoveCard(sec.id, i, -1)}
+                                      disabled={i === 0}
+                                      title="앞으로"
+                                    >
+                                      <ChevronLeft size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleMoveCard(sec.id, i, 1)}
+                                      disabled={i === items.length - 1}
+                                      title="뒤로"
+                                    >
+                                      <ChevronRight size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleDuplicateCard(sec.id, i)}
+                                      title="카드 복제"
+                                    >
+                                      <Copy size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn delete"
+                                      onClick={() => handleDeleteCard(sec.id, i)}
+                                      title="카드 삭제"
+                                    >
+                                      <Trash2 size={11} />
+                                    </button>
                                   </div>
-                                  <div>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                      <strong style={{ fontSize: '15px', color: '#2D6A4F' }}>{Number(prod.price || 0).toLocaleString()}원</strong>
-                                      {prod.originalPrice ? (
-                                        <span style={{ fontSize: '11px', color: '#A09E9B', textDecoration: 'line-through' }}>{Number(prod.originalPrice).toLocaleString()}원</span>
-                                      ) : null}
+
+                                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
+                                    <DynamicIcon name={it.icon || 'Sparkles'} size={20} color="#2D6A4F" />
+                                  </div>
+                                  <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#2B2A27', margin: '0 0 8px 0', wordBreak: 'keep-all' }}>
+                                    {it.title}
+                                  </h3>
+                                  <p style={{ fontSize: '12px', color: '#6B6862', lineHeight: 1.5, margin: 0, wordBreak: 'keep-all' }}>
+                                    {it.desc}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Add New Feature Card Button */}
+                            <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleAddCard(sec.id, 'features')}
+                                className="btn-add-card-item"
+                              >
+                                <Plus size={15} /> <span>+ 새 특장점 카드 추가</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 4. LINEUP SECTION */}
+                      {sec.type === 'lineup' && (() => {
+                        const items = Array.isArray(data.items) ? data.items : [];
+                        return (
+                          <div style={{ padding: '60px 24px', backgroundColor: '#FFFFFF' }}>
+                            <div 
+                              onClick={() => handleOpenEditModal('lineup', sec.id)}
+                              className="el-hover-target"
+                              style={{ textAlign: 'center', marginBottom: '32px', cursor: 'pointer', maxWidth: '600px', margin: '0 auto 32px auto' }}
+                            >
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
+                                {data.subtitle || 'PRODUCT LINEUP'}
+                              </span>
+                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                                {data.title || '상큼함을 담은 라인업'}
+                              </h2>
+                            </div>
+
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))',
+                              gap: '18px',
+                              maxWidth: '960px',
+                              margin: '0 auto 20px auto'
+                            }}>
+                              {items.map((prod, i) => (
+                                <div 
+                                  key={prod.id || i} 
+                                  className="card-hover-box"
+                                  style={{ border: '1px solid #EAE8E3', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column' }}
+                                >
+                                  {/* Card Actions Toolbar */}
+                                  <div className="card-item-toolbar">
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn edit"
+                                      onClick={() => handleOpenEditModal('lineup', sec.id)}
+                                      title="상품 정보 및 이미지 수정"
+                                    >
+                                      <Edit3 size={11} /> <span>수정</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleMoveCard(sec.id, i, -1)}
+                                      disabled={i === 0}
+                                      title="앞으로"
+                                    >
+                                      <ChevronLeft size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleMoveCard(sec.id, i, 1)}
+                                      disabled={i === items.length - 1}
+                                      title="뒤로"
+                                    >
+                                      <ChevronRight size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleDuplicateCard(sec.id, i)}
+                                      title="상품 복제"
+                                    >
+                                      <Copy size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn delete"
+                                      onClick={() => handleDeleteCard(sec.id, i)}
+                                      title="상품 삭제"
+                                    >
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </div>
+
+                                  {/* Product Image or Clean Placeholder */}
+                                  <div style={{ height: '170px', backgroundColor: '#FAF9F6', overflow: 'hidden', position: 'relative' }}>
+                                    {prod.image ? (
+                                      <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#A09E9B', gap: '4px' }}>
+                                        <ImageIcon size={28} style={{ opacity: 0.5 }} />
+                                        <span style={{ fontSize: '11px', fontWeight: '700' }}>이미지 준비 중</span>
+                                      </div>
+                                    )}
+                                    {prod.badge && (
+                                      <span style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: '#2D6A4F', color: '#FFFFFF', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>
+                                        {prod.badge}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div style={{ padding: '14px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                    <div>
+                                      <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#2B2A27', margin: '0 0 4px 0', wordBreak: 'keep-all' }}>{prod.name}</h4>
+                                      <p style={{ fontSize: '11px', color: '#6B6862', margin: '0 0 8px 0', lineHeight: 1.4, wordBreak: 'keep-all' }}>{prod.desc}</p>
                                     </div>
-                                    <span style={{ fontSize: '10px', color: '#8C6F3E', display: 'block', marginTop: '2px' }}>{prod.unit}</span>
+                                    <div>
+                                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                        <strong style={{ fontSize: '16px', color: '#2D6A4F' }}>{Number(prod.price || 0).toLocaleString()}원</strong>
+                                        {prod.originalPrice ? (
+                                          <span style={{ fontSize: '11px', color: '#A09E9B', textDecoration: 'line-through' }}>{Number(prod.originalPrice).toLocaleString()}원</span>
+                                        ) : null}
+                                      </div>
+                                      <span style={{ fontSize: '11px', color: '#8C6F3E', display: 'block', marginTop: '2px' }}>{prod.unit}</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
+
+                            {/* Add New Lineup Card Button */}
+                            <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleAddCard(sec.id, 'lineup')}
+                                className="btn-add-card-item"
+                              >
+                                <Plus size={15} /> <span>+ 새 상품 카드 추가</span>
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }
+                        );
+                      })()}
 
-                    if (sec.type === 'reviews') {
-                      const items = Array.isArray(data.items) ? data.items : [];
-                      return (
-                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '50px 24px', backgroundColor: '#FAF9F6', borderBottom: '1px solid #EAE8E3' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal('reviews', sec.id)}
-                            className="canvas-edit-overlay-btn"
-                          >
-                            <Edit3 size={13} /> <span>후기 편집</span>
-                          </button>
+                      {/* 5. REVIEWS SECTION */}
+                      {sec.type === 'reviews' && (() => {
+                        const items = Array.isArray(data.items) ? data.items : [];
+                        return (
+                          <div style={{ padding: '60px 24px', backgroundColor: '#FAF9F6' }}>
+                            <div 
+                              onClick={() => handleOpenEditModal('reviews', sec.id)}
+                              className="el-hover-target"
+                              style={{ textAlign: 'center', marginBottom: '32px', cursor: 'pointer', maxWidth: '600px', margin: '0 auto 32px auto' }}
+                            >
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
+                                {data.subtitle || 'CUSTOMER REVIEWS'}
+                              </span>
+                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                                {data.title || '직접 맛보신 분들의 생생한 후기'}
+                              </h2>
+                            </div>
 
-                          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
-                              {data.subtitle || 'CUSTOMER REVIEWS'}
-                            </span>
-                            <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
-                              {data.title || '직접 맛보신 분들의 생생한 후기'}
-                            </h2>
-                          </div>
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : 'repeat(auto-fit, minmax(260px, 1fr))',
+                              gap: '16px',
+                              maxWidth: '960px',
+                              margin: '0 auto 20px auto'
+                            }}>
+                              {items.map((rev, i) => (
+                                <div 
+                                  key={rev.id || i} 
+                                  className="card-hover-box"
+                                  style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAE8E3', borderRadius: '12px', padding: '18px' }}
+                                >
+                                  {/* Card Actions Toolbar */}
+                                  <div className="card-item-toolbar">
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn edit"
+                                      onClick={() => handleOpenEditModal('reviews', sec.id)}
+                                      title="후기 수정"
+                                    >
+                                      <Edit3 size={11} /> <span>수정</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleMoveCard(sec.id, i, -1)}
+                                      disabled={i === 0}
+                                      title="앞으로"
+                                    >
+                                      <ChevronLeft size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleMoveCard(sec.id, i, 1)}
+                                      disabled={i === items.length - 1}
+                                      title="뒤로"
+                                    >
+                                      <ChevronRight size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn"
+                                      onClick={() => handleDuplicateCard(sec.id, i)}
+                                      title="후기 복제"
+                                    >
+                                      <Copy size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="card-tool-btn delete"
+                                      onClick={() => handleDeleteCard(sec.id, i)}
+                                      title="후기 삭제"
+                                    >
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </div>
 
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : 'repeat(auto-fit, minmax(240px, 1fr))',
-                            gap: '16px',
-                            maxWidth: '900px',
-                            margin: '0 auto'
-                          }}>
-                            {items.map((rev, idx) => (
-                              <div key={rev.id || idx} style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAE8E3', borderRadius: '12px', padding: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#E8A317', marginBottom: '8px' }}>
-                                  {[...Array(rev.rating || 5)].map((_, i) => (
-                                    <Star key={i} size={14} fill="#E8A317" />
-                                  ))}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#E8A317', marginBottom: '8px' }}>
+                                    {[...Array(rev.stars || rev.rating || 5)].map((_, idxStar) => (
+                                      <Star key={idxStar} size={14} fill="#E8A317" />
+                                    ))}
+                                  </div>
+                                  <p style={{ fontSize: '13px', color: '#2B2A27', lineHeight: 1.55, margin: '0 0 12px 0', wordBreak: 'keep-all' }}>
+                                    "{rev.text || rev.content}"
+                                  </p>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#8C8983' }}>
+                                    <span>{rev.author} · {rev.product}</span>
+                                    {rev.tag && <span style={{ color: '#2D6A4F', fontWeight: '700' }}>#{rev.tag}</span>}
+                                  </div>
                                 </div>
-                                <p style={{ fontSize: '12px', color: '#2B2A27', lineHeight: 1.5, margin: '0 0 12px 0', wordBreak: 'keep-all' }}>
-                                  "{rev.content}"
-                                </p>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#8C8983' }}>
-                                  <span>{rev.author} · {rev.product}</span>
-                                  {rev.tag && <span style={{ color: '#2D6A4F', fontWeight: '700' }}>#{rev.tag}</span>}
-                                </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
+
+                            {/* Add New Review Card Button */}
+                            <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleAddCard(sec.id, 'reviews')}
+                                className="btn-add-card-item"
+                              >
+                                <Plus size={15} /> <span>+ 새 고객 후기 추가</span>
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }
+                        );
+                      })()}
 
-                    if (sec.type === 'cta') {
-                      return (
-                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '60px 24px', backgroundColor: '#2D6A4F', color: '#FFFFFF', textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal('cta', sec.id)}
-                            className="canvas-edit-overlay-btn"
-                          >
-                            <Edit3 size={13} /> <span>CTA 편집</span>
-                          </button>
-
+                      {/* 6. CTA BANNER SECTION */}
+                      {sec.type === 'cta' && (
+                        <div style={{ padding: '60px 24px', backgroundColor: '#2D6A4F', color: '#FFFFFF', textAlign: 'center' }}>
                           {data.badge && (
-                            <span style={{ display: 'inline-block', backgroundColor: 'rgba(255,255,255,0.15)', color: '#FFFFFF', padding: '4px 12px', borderRadius: '16px', fontSize: '11px', fontWeight: '700', marginBottom: '14px' }}>
-                              {data.badge}
-                            </span>
+                            <div 
+                              onClick={() => handleOpenEditModal('cta', sec.id)}
+                              className="el-hover-target"
+                              style={{ display: 'inline-block', marginBottom: '14px', cursor: 'pointer' }}
+                            >
+                              <span style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF', padding: '4px 14px', borderRadius: '16px', fontSize: '11px', fontWeight: '700' }}>
+                                {data.badge}
+                              </span>
+                            </div>
                           )}
 
-                          <h2 style={{ fontSize: previewDevice === 'mobile' ? '22px' : '30px', fontWeight: '900', margin: '0 0 12px 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                          <h2 
+                            onClick={() => handleOpenEditModal('cta', sec.id)}
+                            className="el-hover-target"
+                            style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#FFFFFF', margin: '0 0 10px 0', whiteSpace: 'pre-line', wordBreak: 'keep-all', cursor: 'pointer' }}
+                          >
                             {data.title || '향긋한 고흥 유자의 감동을\n지금 바로 만나보세요'}
                           </h2>
 
@@ -2521,41 +2779,88 @@ export default function AdminDashboard() {
                             )}
                           </div>
                         </div>
-                      );
-                    }
+                      )}
+                    </div>
+                  );
+                })}
 
-                    return null;
-                  })}
-
-                  {/* Canvas Footer */}
-                  <div style={{ padding: '30px 20px', backgroundColor: '#1F1E1D', color: '#999', fontSize: '11px', position: 'relative' }} className="canvas-section-hover">
+                {/* 2.3 Live Canvas Footer */}
+                <div 
+                  className="canvas-section-box"
+                  style={{
+                    backgroundColor: '#1C1B18',
+                    color: '#FAF9F6',
+                    padding: '36px 24px',
+                    position: 'relative'
+                  }}
+                >
+                  <div className="section-floating-tag">
+                    <span>푸터 및 사업자 정보</span>
+                  </div>
+                  <div className="section-floating-toolbar">
                     <button
                       type="button"
+                      className="sec-tool-btn primary"
                       onClick={() => handleOpenEditModal('footer')}
-                      className="canvas-edit-overlay-btn"
+                      title="푸터 회사 정보 및 SNS 링크 수정"
                     >
-                      <Edit3 size={13} /> <span>푸터/SNS 편집</span>
+                      <Settings size={12} /> <span>푸터 설정</span>
                     </button>
+                  </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#FFF' }}>
-                        {landingSettings.footer?.companyName || '행복마루'}
-                      </span>
-                      <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px' }}>
+                      <div 
+                        onClick={() => handleOpenEditModal('footer')}
+                        className="el-hover-target"
+                        style={{ cursor: 'pointer', padding: '4px' }}
+                      >
+                        <span style={{ fontSize: '18px', fontWeight: '900', color: '#E8A317', display: 'block', marginBottom: '4px' }}>
+                          {landingSettings.footer?.brandName || 'Yuzu Oranda'}
+                        </span>
+                        <p style={{ fontSize: '12px', color: '#B3B0A6', margin: 0, lineHeight: 1.5 }}>
+                          {landingSettings.footer?.desc || '바삭함 속에 피어나는 싱그러움. 자연에서 온 유자와 전통 오란다의 맛있는 만남.'}
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {(landingSettings.footer?.snsLinks || []).filter(s => s.enabled).map(s => (
-                          <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#FFF' }}>
-                            <DynamicIcon name={s.icon || 'ExternalLink'} size={14} color="#FFF" />
+                          <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#FAF9F6', backgroundColor: 'rgba(255,255,255,0.08)', padding: '6px 12px', borderRadius: '16px', fontSize: '12px' }}>
+                            <DynamicIcon name={s.icon || 'ExternalLink'} size={13} color="#FAF9F6" />
                             <span>{s.name}</span>
                           </span>
                         ))}
                       </div>
                     </div>
-                    <div style={{ lineHeight: 1.6 }}>
-                      <span>대표: {landingSettings.footer?.ceo || '김은주'}</span> | 
-                      <span> 사업자등록번호: {landingSettings.footer?.registrationNo || '546-95-01586'}</span><br />
-                      <span>주소: {landingSettings.footer?.address || '전라남도 고흥군 도화면'}</span> | 
-                      <span> 문의: {landingSettings.footer?.phone || '010-8608-2510'}</span>
-                    </div>
+
+                    {/* Company Info */}
+                    {(() => {
+                      const comp = landingSettings.footer?.companyInfo || {};
+                      return (
+                        <div 
+                          onClick={() => handleOpenEditModal('footer')}
+                          className="el-hover-target"
+                          style={{ cursor: 'pointer', padding: '6px', fontSize: '12px', color: '#8C8983', lineHeight: 1.7 }}
+                        >
+                          <div>
+                            <strong>상호: {comp.companyName || '유자품은 오란다&까부리'}</strong> | 
+                            <span> 대표자: {comp.representative || '정귀례'}</span> | 
+                            <span> 사업자등록번호: {comp.bizNumber || '566-82-00511'}</span>
+                          </div>
+                          <div>
+                            <span>통신판매업신고: {comp.orderReport || '제 2026-전남고흥-0000호'}</span> | 
+                            <span> 고객센터: {comp.phone || '061-835-1366'}</span> | 
+                            <span> 이메일: {comp.email || 'nanuri1366@daum.net'}</span>
+                          </div>
+                          <div>
+                            <span>주소: {comp.address || '전남광주통합특별시 고흥군 고흥읍 봉동주공길 9, 1층'}</span>
+                          </div>
+                          <div style={{ marginTop: '8px', color: '#666' }}>
+                            <span>{comp.copyright || '© 2026 유자품은 오란다&까부리. All Rights Reserved.'}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -4289,9 +4594,35 @@ export default function AdminDashboard() {
             {/* 8. FOOTER & SNS EDITOR */}
             {editingModal.type === 'footer' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ backgroundColor: '#FAF6EE', padding: '12px', borderRadius: '8px', border: '1px solid #EAE8E3' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#8C6F3E', display: 'block', marginBottom: '8px' }}>
+                    브랜드 기본 정보
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>푸터 브랜드 영문명</label>
+                      <input
+                        type="text"
+                        value={editingModal.data.brandName || ''}
+                        onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, brandName: e.target.value } }))}
+                        style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>브랜드 한줄 슬로건/소개</label>
+                      <input
+                        type="text"
+                        value={editingModal.data.desc || ''}
+                        onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, desc: e.target.value } }))}
+                        style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상호명</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상호명 (법인/개인)</label>
                     <input
                       type="text"
                       value={editingModal.data.companyName || ''}
@@ -4303,8 +4634,8 @@ export default function AdminDashboard() {
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>대표자 성명</label>
                     <input
                       type="text"
-                      value={editingModal.data.ceo || ''}
-                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, ceo: e.target.value } }))}
+                      value={editingModal.data.representative || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, representative: e.target.value } }))}
                       style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
                     />
                   </div>
@@ -4315,28 +4646,64 @@ export default function AdminDashboard() {
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>사업자등록번호</label>
                     <input
                       type="text"
-                      value={editingModal.data.registrationNo || ''}
-                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, registrationNo: e.target.value } }))}
+                      value={editingModal.data.bizNumber || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, bizNumber: e.target.value } }))}
+                      placeholder="000-00-00000"
                       style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>고객센터 연락처</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>통신판매업 신고번호</label>
+                    <input
+                      type="text"
+                      value={editingModal.data.orderReport || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, orderReport: e.target.value } }))}
+                      placeholder="제 2026-전남고흥-0000호"
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>고객센터 전화번호</label>
                     <input
                       type="text"
                       value={editingModal.data.phone || ''}
                       onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, phone: e.target.value } }))}
+                      placeholder="061-835-1366"
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>대표 이메일</label>
+                    <input
+                      type="email"
+                      value={editingModal.data.email || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, email: e.target.value } }))}
+                      placeholder="nanuri1366@daum.net"
                       style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>사업장 주소</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>사업장 소재지 주소</label>
                   <input
                     type="text"
                     value={editingModal.data.address || ''}
                     onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, address: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>저작권 표기 (Copyright)</label>
+                  <input
+                    type="text"
+                    value={editingModal.data.copyright || ''}
+                    onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, copyright: e.target.value } }))}
+                    placeholder="© 2026 유자품은 오란다&까부리. All Rights Reserved."
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
                   />
                 </div>
@@ -4552,6 +4919,320 @@ export default function AdminDashboard() {
 
           </div>
         )}
+      </ModalPopup>
+
+      {/* ==================================================================== */}
+      {/* MODAL 7: SECTION LIST, ORDER & ADD MODAL                             */}
+      {/* ==================================================================== */}
+      <ModalPopup
+        isOpen={sectionListModalOpen}
+        onClose={() => setSectionListModalOpen(false)}
+        title="📋 랜딩페이지 섹션 순서 관리 및 새 섹션 추가"
+        subtitle="전체 섹션의 순서를 조정하거나 화면 노출/숨김, 복제, 삭제하고 새 섹션을 추가할 수 있습니다."
+        footerActions={
+          <button
+            type="button"
+            onClick={() => setSectionListModalOpen(false)}
+            style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', background: '#2D6A4F', color: '#FFFFFF', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}
+          >
+            확인 및 닫기
+          </button>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '72vh', overflowY: 'auto', paddingRight: '4px' }}>
+          
+          {/* Section 1: Current Sections Reordering List */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <strong style={{ fontSize: '14px', color: '#2B2A27' }}>
+                현재 등록된 섹션 순서 ({(landingSettings.sections || []).length}개)
+              </strong>
+              <span style={{ fontSize: '12px', color: '#6B6862' }}>
+                💡 순서 변경 후 우측 상단의 [전체 저장] 버튼을 누르면 홈페이지에 최종 적용됩니다.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {(landingSettings.sections || []).map((sec, idx) => {
+                const total = (landingSettings.sections || []).length;
+                return (
+                  <div
+                    key={sec.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      backgroundColor: sec.enabled ? '#FFFFFF' : '#F9F8F5',
+                      border: sec.enabled ? '1px solid #EAE8E3' : '1px dashed #D6D3CC',
+                      borderRadius: '10px',
+                      opacity: sec.enabled ? 1 : 0.65,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {/* Left: Info */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        backgroundColor: '#FAF6EE',
+                        color: '#8C6F3E',
+                        fontWeight: '800',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid #EAE8E3'
+                      }}>
+                        {idx + 1}
+                      </span>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <strong style={{ fontSize: '14px', color: '#2B2A27' }}>{sec.name}</strong>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            backgroundColor: '#FAF6EE',
+                            color: '#8C6F3E',
+                            border: '1px solid #EAE8E3'
+                          }}>
+                            {sec.type}
+                          </span>
+                          {sec.showInNav && (
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: '#EBF5FF',
+                              color: '#2563EB',
+                              border: '1px solid #BFDBFE'
+                            }}>
+                              GNB 메뉴 ({sec.navLabel || sec.name})
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#8C8983' }}>앵커: #{sec.anchor || sec.id}</span>
+                      </div>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {/* Move Up */}
+                      <button
+                        type="button"
+                        onClick={() => handleMoveSection(idx, -1)}
+                        disabled={idx === 0}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #EAE8E3',
+                          backgroundColor: '#FFFFFF',
+                          cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                          color: idx === 0 ? '#C5C2BA' : '#2B2A27',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px'
+                        }}
+                        title="위로 이동"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+
+                      {/* Move Down */}
+                      <button
+                        type="button"
+                        onClick={() => handleMoveSection(idx, 1)}
+                        disabled={idx === total - 1}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #EAE8E3',
+                          backgroundColor: '#FFFFFF',
+                          cursor: idx === total - 1 ? 'not-allowed' : 'pointer',
+                          color: idx === total - 1 ? '#C5C2BA' : '#2B2A27',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px'
+                        }}
+                        title="아래로 이동"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+
+                      {/* Visibility Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSectionVisibility(sec.id)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #EAE8E3',
+                          backgroundColor: sec.enabled ? '#FAF6EE' : '#F0EEE9',
+                          cursor: 'pointer',
+                          color: sec.enabled ? '#2D6A4F' : '#8C8983',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px',
+                          fontWeight: '700'
+                        }}
+                        title={sec.enabled ? '클릭하여 화면에서 숨기기' : '클릭하여 화면에 노출하기'}
+                      >
+                        {sec.enabled ? <Eye size={14} /> : <EyeOff size={14} />}
+                        <span>{sec.enabled ? '노출' : '숨김'}</span>
+                      </button>
+
+                      {/* Duplicate */}
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicateSection(sec.id)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #EAE8E3',
+                          backgroundColor: '#FFFFFF',
+                          cursor: 'pointer',
+                          color: '#2B2A27',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px'
+                        }}
+                        title="섹션 복제"
+                      >
+                        <Copy size={14} />
+                      </button>
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSection(sec.id)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #FCDAD7',
+                          backgroundColor: '#FFF5F5',
+                          cursor: 'pointer',
+                          color: '#C0392B',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px'
+                        }}
+                        title="섹션 삭제"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+
+                      {/* Settings */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSectionListModalOpen(false);
+                          handleOpenEditModal(sec.type, sec.id);
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: '#2D6A4F',
+                          color: '#FFFFFF',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px',
+                          fontWeight: '700'
+                        }}
+                        title="섹션 내용 및 앵커 편집"
+                      >
+                        <Settings size={14} />
+                        <span>설정</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 2: Add New Section Templates */}
+          <div style={{ borderTop: '1px solid #EAE8E3', paddingTop: '16px' }}>
+            <strong style={{ fontSize: '14px', color: '#2B2A27', display: 'block', marginBottom: '10px' }}>
+              ➕ 새로운 디자인 섹션 추가
+            </strong>
+            <p style={{ fontSize: '12px', color: '#6B6862', margin: '0 0 12px 0' }}>
+              아래 원하는 템플릿을 선택하면 기본 양식이 포함된 새 섹션이 페이지 하단에 추가됩니다.
+            </p>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+              gap: '12px'
+            }}>
+              {[
+                { type: 'hero', name: '히어로 비주얼', desc: '메인 대표 배너 및 슬로건', icon: Globe },
+                { type: 'story', name: '브랜드 스토리', desc: '고흥 유자와 정성 이야기', icon: Layers },
+                { type: 'features', name: '핵심 특장점', desc: '3대 시그니처 매력 포인트', icon: Sparkles },
+                { type: 'lineup', name: '상품 라인업', desc: '단품 및 세트 구매 카드', icon: ShoppingBag },
+                { type: 'reviews', name: '고객 생생 후기', desc: '실제 구매 고객 평점/리뷰', icon: Star },
+                { type: 'cta', name: '하단 CTA 배너', desc: '구매 및 문의 행동 유도', icon: Send }
+              ].map(tpl => {
+                const IconCmp = tpl.icon;
+                return (
+                  <button
+                    key={tpl.type}
+                    type="button"
+                    onClick={() => {
+                      handleAddSection(tpl.type);
+                    }}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      padding: '14px',
+                      borderRadius: '10px',
+                      border: '1px solid #EAE8E3',
+                      backgroundColor: '#FAF9F6',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FAF6EE';
+                      e.currentTarget.style.borderColor = '#2D6A4F';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FAF9F6';
+                      e.currentTarget.style.borderColor = '#EAE8E3';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{ backgroundColor: '#FFFFFF', padding: '6px', borderRadius: '6px', border: '1px solid #EAE8E3', display: 'flex' }}>
+                        <IconCmp size={16} color="#2D6A4F" />
+                      </span>
+                      <strong style={{ fontSize: '13px', color: '#2B2A27' }}>{tpl.name}</strong>
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#6B6862', lineHeight: 1.4 }}>{tpl.desc}</span>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#2D6A4F', marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                      + 섹션 추가
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
       </ModalPopup>
 
     </div>

@@ -504,11 +504,30 @@ export default function Home() {
                           </div>
                         )}
                         <div className="product-img-wrapper">
-                          <img 
-                            src={product.image || "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"} 
-                            alt={product.name} 
-                            className="product-img" 
-                          />
+                          {product.image ? (
+                            <img 
+                              src={product.image} 
+                              alt={product.name} 
+                              className="product-img" 
+                            />
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#FAF9F6',
+                              color: '#A09E9B',
+                              gap: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600'
+                            }}>
+                              <span style={{ fontSize: '24px' }}>📷</span>
+                              <span>이미지 준비 중</span>
+                            </div>
+                          )}
                         </div>
                         <div className="product-info">
                           <h3 className="product-name" style={{ fontSize: '17px', minHeight: '52px', lineHeight: '1.4', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
@@ -758,13 +777,6 @@ export default function Home() {
             <p className="copyright">
               {landingSettings.footer?.companyInfo?.copyright || "© 2026 유자품은 오란다&까부리. All Rights Reserved."}
             </p>
-
-            {/* Quick Gate Links */}
-            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '14px', fontSize: '12px', color: 'rgba(255,255,255,0.45)' }}>
-              <a href="/admin" style={{ color: 'inherit', textDecoration: 'underline' }}>관리자 모드</a>
-              <span>|</span>
-              <a href="/producer" style={{ color: 'inherit', textDecoration: 'underline' }}>생산자 모드</a>
-            </div>
           </div>
         </div>
       </footer>
