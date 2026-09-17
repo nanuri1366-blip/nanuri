@@ -1546,3 +1546,208 @@ input:checked + .slider:before {
     }
 }
 
+/* ==========================================================================
+   Live Landing Page Editor & Split View
+   ========================================================================== */
+.landing-editor-layout {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 120px);
+    min-height: 700px;
+    margin-top: 14px;
+}
+
+.editor-sidebar-panel {
+    width: 380px;
+    flex-shrink: 0;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.editor-sidebar-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: #FAF9F6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.editor-sections-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.section-item-card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #FFFFFF;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.section-item-card:hover {
+    border-color: #FFAA00;
+    box-shadow: 0 2px 8px rgba(180, 160, 120, 0.12);
+}
+
+.section-item-card.disabled {
+    opacity: 0.55;
+    background: #FAF9F6;
+}
+
+.editor-preview-container {
+    flex-grow: 1;
+    background: #2B2A27;
+    border-radius: var(--radius-md);
+    border: 1px solid #3E3D3A;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+
+.preview-toolbar {
+    padding: 10px 16px;
+    background: #1F1E1C;
+    border-bottom: 1px solid #3E3D3A;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #EAE8E3;
+}
+
+.preview-viewport-box {
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    background: #363532;
+}
+
+.preview-frame {
+    background: #FFFFFF;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: width 0.3s ease;
+    height: fit-content;
+    min-height: 100%;
+}
+
+.preview-frame.desktop {
+    width: 100%;
+    max-width: 1180px;
+}
+
+.preview-frame.tablet {
+    width: 768px;
+}
+
+.preview-frame.mobile {
+    width: 390px;
+}
+
+/* Editable Hover Overlay & Pencil Button */
+.editable-element-wrap {
+    position: relative;
+    outline: 1.5px dashed transparent;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.editable-element-wrap:hover {
+    outline-color: #2D6A4F;
+    background-color: rgba(45, 106, 79, 0.04);
+}
+
+.editable-element-btn {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #2D6A4F;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 20px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    display: none;
+    align-items: center;
+    gap: 4px;
+    z-index: 50;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+}
+
+.editable-element-wrap:hover > .editable-element-btn {
+    display: inline-flex;
+}
+
+/* Icon Selector Grid */
+.icon-grid-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #FAF9F6;
+}
+
+.icon-grid-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    border: 1.5px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #FFFFFF;
+    transition: all 0.15s ease;
+}
+
+.icon-grid-item:hover {
+    border-color: #FFAA00;
+    background: #FFFDF5;
+}
+
+.icon-grid-item.selected {
+    border-color: #2D6A4F;
+    background: #E8F5E9;
+    color: #2D6A4F;
+}
+
+/* Password Manager Cards */
+.password-mgmt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 20px;
+    margin-top: 16px;
+}
+
+.password-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+}
+

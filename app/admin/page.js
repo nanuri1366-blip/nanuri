@@ -7,6 +7,13 @@ import ModalPopup from '../../components/common/ModalPopup';
 import StockBadge from '../../components/common/StockBadge';
 import { formatCurrency, formatDateTime } from '../../lib/inventoryCommon';
 import { 
+  DEFAULT_LANDING_CONFIG, 
+  normalizeLandingSettings, 
+  SECTION_TEMPLATES, 
+  AVAILABLE_ICON_NAMES, 
+  DynamicIcon 
+} from '../../lib/landingDefaults';
+import { 
   ShoppingCart, 
   Package, 
   Layers, 
@@ -32,93 +39,54 @@ import {
   Calendar,
   ChevronUp,
   ChevronDown,
-  ExternalLink
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Copy,
+  GripVertical,
+  Settings,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Sparkles,
+  Star,
+  Image as ImageIcon,
+  FileText,
+  X
 } from 'lucide-react';
 import './admin.css';
 
-// Default Landing Settings for fallback
-const defaultLandingSettings = {
-  popups: [
-    {
-      id: "popup_1",
-      enabled: false,
-      title: "공지사항",
-      content: "유자를 품은 오란다&까부리 홈페이지를 방문해 주셔서 감사합니다. 현재 단체 주문은 스마트스토어 또는 고객센터로 직접 문의 주시면 친절하게 안내해 드리겠습니다.",
-      image: "",
-      link: "https://smartstore.naver.com/kkaburioranda",
-      linkText: "자세히 보기"
-    }
-  ],
-  popup: {
-    enabled: false,
-    title: "공지사항",
-    content: "유자를 품은 오란다&까부리 홈페이지를 방문해 주셔서 감사합니다. 현재 단체 주문은 스마트스토어 또는 고객센터로 직접 문의 주시면 친절하게 안내해 드리겠습니다.",
-    image: "",
-    link: "https://smartstore.naver.com/kkaburioranda",
-    linkText: "자세히 보기"
-  },
-  hero: {
-    badge: "PREMIUM HANDMADE DESSERT",
-    title: "바삭함 속에 피어나는\n싱그러운 유자 향",
-    subtitle: "100% 고흥 유자로 담근 유자청과 쌀엿조청의 황금 비율로 탄생한\n끈적임 없고 바삭한 프리미엄 수제 오란다&까부리입니다.",
-    image: "images/yuzu_oranda_hero.png",
-    ctaText: "스마트스토어로 구매하기",
-    ctaLink: "https://smartstore.naver.com/kkaburioranda/products/12823083471",
-    storyLinkText: "스토리 읽어보기"
-  },
-  brandStory: {
-    subtitle: "BRAND STORY",
-    title: "자연에서 온 상큼함과\n전통의 만남",
-    sectionTitle: "딱딱하고 끈적이는 오란다는 잊으세요.",
-    body1: "우리는 오란다를 먹을 때 입천장이 아프거나 이가 끈적여 불편했던 기억에서 출발했습니다. 어떻게 하면 남녀노소 누구나 가볍고 맛있게 한과를 즐길 수 있을까 고민했습니다.",
-    body2: "남해안의 따뜻한 햇살을 머금고 자란 100% 국산 유자를 엄선하여 즙을 내고 껍질을 잘게 다져 넣었습니다. 가마솥에 푹 고아낸 쌀조청에 상큼한 유자청을 배합해 한 입 베어 물면 바삭하게 부서지며 향긋한 유자향이 입안 가득 번집니다.",
-    featureBadge: "100% 국산 천연 유자",
-    featureDesc: "인공 향료나 보존료 없이 오직 진짜 유자만을 가득 담았습니다.",
-    image: "images/yuzu_classic_oranda.png"
-  },
-  products: {
-    deundeun: {
-      name: "[든든세트] 고흥 유자품은 까부리와 오란다",
-      desc: "오란다/까부리 선택식 (18개입). 넉넉하게 채워 온 가족이 함께 먹기 좋은 프리미엄 든든세트.",
-      originalPrice: 30600,
-      price: 27540,
-      unit: "(18개입 / 1박스)",
-      badge: "Best",
-      url: "https://smartstore.naver.com/kkaburioranda/products/12823083471",
-      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
-    },
-    silsok: {
-      name: "[실속세트] 고흥 유자품은 까부리와 오란다",
-      desc: "오란다/까부리 선택식 (12개입). 부담 없는 가격과 실속 있는 구성으로 간식용 선물로 가장 추천하는 세트.",
-      originalPrice: 20400,
-      price: 18360,
-      unit: "(12개입 / 1박스)",
-      badge: "추천",
-      url: "https://smartstore.naver.com/kkaburioranda/products/12823080166",
-      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
-    },
-    mini: {
-      name: "[미니세트] 고흥 유자품은 까부리와 오란다",
-      desc: "오란다/까부리 선택식 (6개입). 답례품 및 가벼운 체험용으로 안성맞춤인 미니 구성 세트.",
-      originalPrice: 10200,
-      price: 9180,
-      unit: "(6개입 / 1박스)",
-      badge: "인기",
-      url: "https://smartstore.naver.com/kkaburioranda/products/12823072673",
-      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
-    },
-    natgae: {
-      name: "[낱개] 고흥 유자품은 까부리와 오란다",
-      desc: "개별 시식용 오란다 / 까부리 낱개 구성. 가볍게 맛보고 싶을 때 추천하는 싱글 메뉴.",
-      originalPrice: 2200,
-      price: 2000,
-      unit: "(1개입)",
-      badge: "낱개",
-      url: "https://smartstore.naver.com/kkaburioranda/products/12701706707",
-      image: "https://shop-phinf.pstatic.net/20251214_20/1765696482005znToa_PNG/18622543421055178_1644104875.png?type=o1000"
-    }
-  }
-};
+// Icon Picker Component for Features & Badges
+function IconPicker({ selectedIcon, onSelect }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(42px, 1fr))', gap: '6px', maxHeight: '160px', overflowY: 'auto', padding: '8px', border: '1px solid #EAE8E3', borderRadius: '8px', backgroundColor: '#FAF9F6' }}>
+      {AVAILABLE_ICON_NAMES.map(iconName => (
+        <button
+          key={iconName}
+          type="button"
+          onClick={() => onSelect(iconName)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px 4px',
+            borderRadius: '6px',
+            border: selectedIcon === iconName ? '2px solid #2D6A4F' : '1px solid #EAE8E3',
+            backgroundColor: selectedIcon === iconName ? '#D8F3DC' : '#FFFFFF',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          title={iconName}
+        >
+          <DynamicIcon name={iconName} size={20} color={selectedIcon === iconName ? '#2D6A4F' : '#4A4844'} />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // Image Field Editor with URL input and File Upload preview
 function ImageFieldEditor({ label, value, onChange, placeholder = "이미지 URL 또는 PC 파일 업로드" }) {
@@ -217,8 +185,21 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [rawMaterials, setRawMaterials] = useState([]);
   const [inventoryLogs, setInventoryLogs] = useState([]);
-  const [landingSettings, setLandingSettings] = useState(defaultLandingSettings);
+  const [landingSettings, setLandingSettings] = useState(DEFAULT_LANDING_CONFIG);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 3.1 Password Management State
+  const [authPasswords, setAuthPasswords] = useState({ admin: 'yuzu1234', producer: 'maker1234' });
+  const [adminNewPw, setAdminNewPw] = useState('');
+  const [adminConfirmPw, setAdminConfirmPw] = useState('');
+  const [producerNewPw, setProducerNewPw] = useState('');
+  const [producerConfirmPw, setProducerConfirmPw] = useState('');
+  const [pwSaveSuccess, setPwSaveSuccess] = useState('');
+  const [pwSaveError, setPwSaveError] = useState('');
+
+  // 3.2 Visual Landing Page Editor State
+  const [previewDevice, setPreviewDevice] = useState('desktop'); // 'desktop' | 'tablet' | 'mobile'
+  const [editingModal, setEditingModal] = useState({ isOpen: false, type: null, targetId: null, data: null });
 
   // 4. Modal States
   // 4.1 Order Modal
@@ -247,38 +228,27 @@ export default function AdminDashboard() {
   const loadAll = async () => {
     setIsRefreshing(true);
     try {
-      const [ordList, goodsList, prodList, matsList, logsList, land] = await Promise.all([
+      const [ordList, goodsList, prodList, matsList, logsList, land, pwData] = await Promise.all([
         supabase.getOrders(),
         supabase.getFinishedGoods(),
         supabase.getProducts(),
         supabase.getRawMaterials(),
         supabase.getInventoryLogs(),
-        supabase.getLandingSettings()
+        supabase.getLandingSettings(),
+        supabase.getAuthPasswords()
       ]);
       setOrders(ordList || []);
       setFinishedGoods(goodsList || []);
       setProducts(prodList || []);
       setRawMaterials(matsList || []);
       setInventoryLogs(logsList || []);
+      if (pwData) {
+        setAuthPasswords(pwData);
+      }
       if (land) {
-        const mergedPopups = Array.isArray(land.popups) && land.popups.length > 0
-          ? land.popups
-          : (land.popup ? [{ id: 'popup_1', ...defaultLandingSettings.popups[0], ...land.popup }] : defaultLandingSettings.popups);
-
-        setLandingSettings({
-          ...defaultLandingSettings,
-          ...land,
-          popups: mergedPopups,
-          popup: { ...defaultLandingSettings.popup, ...(land.popup || {}) },
-          hero: { ...defaultLandingSettings.hero, ...(land.hero || {}) },
-          brandStory: { ...defaultLandingSettings.brandStory, ...(land.brandStory || {}) },
-          products: {
-            deundeun: { ...defaultLandingSettings.products.deundeun, ...(land.products?.deundeun || {}) },
-            silsok: { ...defaultLandingSettings.products.silsok, ...(land.products?.silsok || {}) },
-            mini: { ...defaultLandingSettings.products.mini, ...(land.products?.mini || {}) },
-            natgae: { ...defaultLandingSettings.products.natgae, ...(land.products?.natgae || {}) }
-          }
-        });
+        setLandingSettings(normalizeLandingSettings(land));
+      } else {
+        setLandingSettings(DEFAULT_LANDING_CONFIG);
       }
 
       if (goodsList && goodsList.length > 0 && !calcSelectedGoodId) {
@@ -317,6 +287,174 @@ export default function AdminDashboard() {
 
     setList(list);
     await supabase.reorderItems(category, list);
+  };
+
+  // Reordering handler for drag-and-drop
+  const handleReorderItems = async (category, reorderedList) => {
+    if (category === 'finished_goods') {
+      setFinishedGoods(reorderedList);
+    } else if (category === 'products') {
+      setProducts(reorderedList);
+    } else if (category === 'raw_materials') {
+      setRawMaterials(reorderedList);
+    }
+    await supabase.reorderItems(category, reorderedList);
+  };
+
+  // Password Management Save Handler
+  const handleSavePasswords = async () => {
+    setPwSaveSuccess('');
+    setPwSaveError('');
+
+    let updatedAdmin = authPasswords.admin;
+    let updatedProducer = authPasswords.producer;
+    let changed = false;
+
+    if (adminNewPw) {
+      if (adminNewPw.length < 4) {
+        setPwSaveError('관리자 새 비밀번호는 최소 4자 이상이어야 합니다.');
+        return;
+      }
+      if (adminNewPw !== adminConfirmPw) {
+        setPwSaveError('관리자 새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      updatedAdmin = adminNewPw;
+      changed = true;
+    }
+
+    if (producerNewPw) {
+      if (producerNewPw.length < 4) {
+        setPwSaveError('생산자 새 비밀번호는 최소 4자 이상이어야 합니다.');
+        return;
+      }
+      if (producerNewPw !== producerConfirmPw) {
+        setPwSaveError('생산자 새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      updatedProducer = producerNewPw;
+      changed = true;
+    }
+
+    if (!changed) {
+      setPwSaveError('변경할 새 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    const newObj = { admin: updatedAdmin, producer: updatedProducer };
+    const success = await supabase.updateAuthPasswords(newObj);
+    if (success) {
+      setAuthPasswords(newObj);
+      setAdminNewPw('');
+      setAdminConfirmPw('');
+      setProducerNewPw('');
+      setProducerConfirmPw('');
+      setPwSaveSuccess('비밀번호가 안전하게 변경되었습니다.');
+    } else {
+      setPwSaveError('비밀번호 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  // Section manipulation handlers for visual editor
+  const handleMoveSection = (index, direction) => {
+    const list = [...(landingSettings.sections || [])];
+    const target = index + direction;
+    if (target < 0 || target >= list.length) return;
+    const temp = list[index];
+    list[index] = list[target];
+    list[target] = temp;
+    setLandingSettings(prev => ({ ...prev, sections: list }));
+  };
+
+  const handleToggleSectionVisibility = (secId) => {
+    setLandingSettings(prev => ({
+      ...prev,
+      sections: (prev.sections || []).map(s => s.id === secId ? { ...s, enabled: !s.enabled } : s)
+    }));
+  };
+
+  const handleAddSection = (templateType) => {
+    const template = SECTION_TEMPLATES[templateType];
+    if (!template) return;
+    const newId = `sec_${templateType}_${Date.now()}`;
+    const newSec = JSON.parse(JSON.stringify(template));
+    newSec.id = newId;
+    newSec.name = `${template.name} (추가)`;
+    setLandingSettings(prev => ({
+      ...prev,
+      sections: [...(prev.sections || []), newSec]
+    }));
+  };
+
+  const handleDuplicateSection = (secId) => {
+    const list = [...(landingSettings.sections || [])];
+    const idx = list.findIndex(s => s.id === secId);
+    if (idx === -1) return;
+    const original = list[idx];
+    const copy = JSON.parse(JSON.stringify(original));
+    copy.id = `sec_${copy.type}_${Date.now()}`;
+    copy.name = `${original.name} (사본)`;
+    list.splice(idx + 1, 0, copy);
+    setLandingSettings(prev => ({ ...prev, sections: list }));
+  };
+
+  const handleDeleteSection = (secId) => {
+    if (!confirm('정말 이 섹션을 삭제하시겠습니까?')) return;
+    setLandingSettings(prev => ({
+      ...prev,
+      sections: (prev.sections || []).filter(s => s.id !== secId)
+    }));
+  };
+
+  const handleOpenEditModal = (type, targetId = null, initialData = null) => {
+    let dataToEdit = null;
+    if (type === 'header') {
+      dataToEdit = JSON.parse(JSON.stringify(landingSettings.header || DEFAULT_LANDING_CONFIG.header));
+    } else if (type === 'footer') {
+      dataToEdit = JSON.parse(JSON.stringify(landingSettings.footer || DEFAULT_LANDING_CONFIG.footer));
+    } else if (type === 'popups') {
+      dataToEdit = JSON.parse(JSON.stringify(landingSettings.popups || []));
+    } else if (targetId) {
+      const sec = (landingSettings.sections || []).find(s => s.id === targetId);
+      if (sec) {
+        dataToEdit = JSON.parse(JSON.stringify(sec));
+      }
+    }
+    setEditingModal({
+      isOpen: true,
+      type,
+      targetId,
+      data: dataToEdit || initialData
+    });
+  };
+
+  const handleSaveEditModal = () => {
+    if (!editingModal.type || !editingModal.data) {
+      setEditingModal({ isOpen: false, type: null, targetId: null, data: null });
+      return;
+    }
+
+    const { type, targetId, data } = editingModal;
+    setLandingSettings(prev => {
+      if (type === 'header') {
+        return { ...prev, header: data };
+      }
+      if (type === 'footer') {
+        return { ...prev, footer: data };
+      }
+      if (type === 'popups') {
+        return { ...prev, popups: data, popup: data[0] || null };
+      }
+      if (targetId) {
+        return {
+          ...prev,
+          sections: (prev.sections || []).map(s => s.id === targetId ? data : s)
+        };
+      }
+      return prev;
+    });
+
+    setEditingModal({ isOpen: false, type: null, targetId: null, data: null });
   };
 
   // Filter orders by date range
@@ -447,9 +585,20 @@ export default function AdminDashboard() {
   }, [calcSelectedGoodId, finishedGoods, rawMaterials]);
 
   // Auth Handler
-  const handleAuthSubmit = (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    if (gatePassword === 'yuzu1234') {
+    let currentAdminPw = authPasswords.admin;
+    try {
+      const dbPw = await supabase.getAuthPasswords();
+      if (dbPw && dbPw.admin) {
+        currentAdminPw = dbPw.admin;
+        setAuthPasswords(dbPw);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    if (gatePassword === currentAdminPw) {
       sessionStorage.setItem('yuzu_admin_auth', 'true');
       setIsAuthenticated(true);
       setShowGateError(false);
@@ -798,7 +947,7 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('raw')}
           >
             <Boxes size={18} />
-            <span>1. 원재료 관리</span>
+            <span>원재료 관리</span>
             <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
               {rawMaterials.length}
             </span>
@@ -809,7 +958,7 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('products')}
           >
             <Layers size={18} />
-            <span>2. 상품(낱개) 관리</span>
+            <span>상품(낱개) 관리</span>
             <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
               {products.length}
             </span>
@@ -820,7 +969,7 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('finished')}
           >
             <Package size={18} />
-            <span>3. 완제품 관리</span>
+            <span>완제품 관리</span>
             <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
               {finishedGoods.length}
             </span>
@@ -831,7 +980,7 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('logs')}
           >
             <History size={18} />
-            <span>4. 변경 내역 (감사)</span>
+            <span>변경 내역 (감사)</span>
             <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.8, backgroundColor: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '10px' }}>
               {inventoryLogs.length}
             </span>
@@ -855,6 +1004,14 @@ export default function AdminDashboard() {
           >
             <Globe size={18} />
             <span>랜딩페이지 설정</span>
+          </button>
+
+          <button 
+            className={`sidebar-link ${activeTab === 'passwords' ? 'active' : ''}`}
+            onClick={() => setActiveTab('passwords')}
+          >
+            <KeyRound size={18} />
+            <span>비밀번호 관리</span>
           </button>
         </nav>
 
@@ -893,12 +1050,6 @@ export default function AdminDashboard() {
               { label: '상품 준비', value: '상품 준비' },
               { label: '수령 완료', value: '수령 완료' },
               { label: '취소', value: '취소' }
-            ]}
-            sortOptions={[
-              { label: '최신 주문순', key: 'order_date', dir: 'desc' },
-              { label: '과거 주문순', key: 'order_date', dir: 'asc' },
-              { label: '주문자 가나다순', key: 'customer_name', dir: 'asc' },
-              { label: '수량 많은순', key: 'quantity', dir: 'desc' }
             ]}
             onAdd={handleOpenAddOrder}
             addButtonText="현장 주문 등록"
@@ -1136,69 +1287,12 @@ export default function AdminDashboard() {
             data={finishedGoods}
             searchKeys={['name', 'set_type']}
             searchPlaceholder="완제품 세트명, 세트 구분 검색..."
-            sortOptions={[
-              { label: '설정순 (기본)', key: '_order', dir: 'asc' },
-              { label: '세트명순', key: 'name', dir: 'asc' },
-              { label: '가격 높은순', key: 'price', dir: 'desc' },
-              { label: '가격 낮은순', key: 'price', dir: 'asc' },
-              { label: '재고 많은순', key: 'stock', dir: 'desc' }
-            ]}
+            onReorderRows={(reordered) => handleReorderItems('finished_goods', reordered)}
             onAdd={handleOpenAddFinished}
             addButtonText="완제품 세트 등록"
             onRefresh={loadAll}
             isRefreshing={isRefreshing}
             columns={[
-              {
-                key: '_order_move',
-                label: '순서',
-                width: '76px',
-                align: 'center',
-                render: (_, row) => {
-                  const idx = finishedGoods.findIndex(g => g.id === row.id);
-                  return (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleMoveItem('finished_goods', idx, -1); }}
-                        disabled={idx <= 0}
-                        style={{
-                          border: '1px solid #D6D3CC',
-                          backgroundColor: idx <= 0 ? '#F5F4F0' : '#FFFFFF',
-                          color: idx <= 0 ? '#C0BDB7' : '#2B2A27',
-                          cursor: idx <= 0 ? 'not-allowed' : 'pointer',
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          lineHeight: 1
-                        }}
-                        title="위로 이동"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleMoveItem('finished_goods', idx, 1); }}
-                        disabled={idx >= finishedGoods.length - 1}
-                        style={{
-                          border: '1px solid #D6D3CC',
-                          backgroundColor: idx >= finishedGoods.length - 1 ? '#F5F4F0' : '#FFFFFF',
-                          color: idx >= finishedGoods.length - 1 ? '#C0BDB7' : '#2B2A27',
-                          cursor: idx >= finishedGoods.length - 1 ? 'not-allowed' : 'pointer',
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          lineHeight: 1
-                        }}
-                        title="아래로 이동"
-                      >
-                        ▼
-                      </button>
-                    </div>
-                  );
-                }
-              },
               {
                 key: 'name',
                 label: '세트 상품명',
@@ -1279,68 +1373,12 @@ export default function AdminDashboard() {
             data={products}
             searchKeys={['name']}
             searchPlaceholder="상품명 검색..."
-            sortOptions={[
-              { label: '설정순 (기본)', key: '_order', dir: 'asc' },
-              { label: '상품명순', key: 'name', dir: 'asc' },
-              { label: '재고 많은순', key: 'stock', dir: 'desc' },
-              { label: '재고 적은순', key: 'stock', dir: 'asc' }
-            ]}
+            onReorderRows={(reordered) => handleReorderItems('products', reordered)}
             onAdd={handleOpenAddProduct}
             addButtonText="신규 상품 등록"
             onRefresh={loadAll}
             isRefreshing={isRefreshing}
             columns={[
-              {
-                key: '_order_move',
-                label: '순서',
-                width: '76px',
-                align: 'center',
-                render: (_, row) => {
-                  const idx = products.findIndex(p => p.id === row.id);
-                  return (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleMoveItem('products', idx, -1); }}
-                        disabled={idx <= 0}
-                        style={{
-                          border: '1px solid #D6D3CC',
-                          backgroundColor: idx <= 0 ? '#F5F4F0' : '#FFFFFF',
-                          color: idx <= 0 ? '#C0BDB7' : '#2B2A27',
-                          cursor: idx <= 0 ? 'not-allowed' : 'pointer',
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          lineHeight: 1
-                        }}
-                        title="위로 이동"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleMoveItem('products', idx, 1); }}
-                        disabled={idx >= products.length - 1}
-                        style={{
-                          border: '1px solid #D6D3CC',
-                          backgroundColor: idx >= products.length - 1 ? '#F5F4F0' : '#FFFFFF',
-                          color: idx >= products.length - 1 ? '#C0BDB7' : '#2B2A27',
-                          cursor: idx >= products.length - 1 ? 'not-allowed' : 'pointer',
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          lineHeight: 1
-                        }}
-                        title="아래로 이동"
-                      >
-                        ▼
-                      </button>
-                    </div>
-                  );
-                }
-              },
               {
                 key: 'name',
                 label: '상품명',
@@ -1407,68 +1445,12 @@ export default function AdminDashboard() {
             data={rawMaterials}
             searchKeys={['name', 'unit']}
             searchPlaceholder="원재료명, 단위 검색..."
-            sortOptions={[
-              { label: '설정순 (기본)', key: '_order', dir: 'asc' },
-              { label: '원재료명순', key: 'name', dir: 'asc' },
-              { label: '재고 많은순', key: 'stock', dir: 'desc' },
-              { label: '재고 적은순', key: 'stock', dir: 'asc' }
-            ]}
+            onReorderRows={(reordered) => handleReorderItems('raw_materials', reordered)}
             onAdd={handleOpenAddRaw}
             addButtonText="신규 원재료 등록"
             onRefresh={loadAll}
             isRefreshing={isRefreshing}
             columns={[
-              {
-                key: '_order_move',
-                label: '순서',
-                width: '76px',
-                align: 'center',
-                render: (_, row) => {
-                  const idx = rawMaterials.findIndex(m => m.id === row.id);
-                  return (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleMoveItem('raw_materials', idx, -1); }}
-                        disabled={idx <= 0}
-                        style={{
-                          border: '1px solid #D6D3CC',
-                          backgroundColor: idx <= 0 ? '#F5F4F0' : '#FFFFFF',
-                          color: idx <= 0 ? '#C0BDB7' : '#2B2A27',
-                          cursor: idx <= 0 ? 'not-allowed' : 'pointer',
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          lineHeight: 1
-                        }}
-                        title="위로 이동"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleMoveItem('raw_materials', idx, 1); }}
-                        disabled={idx >= rawMaterials.length - 1}
-                        style={{
-                          border: '1px solid #D6D3CC',
-                          backgroundColor: idx >= rawMaterials.length - 1 ? '#F5F4F0' : '#FFFFFF',
-                          color: idx >= rawMaterials.length - 1 ? '#C0BDB7' : '#2B2A27',
-                          cursor: idx >= rawMaterials.length - 1 ? 'not-allowed' : 'pointer',
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          lineHeight: 1
-                        }}
-                        title="아래로 이동"
-                      >
-                        ▼
-                      </button>
-                    </div>
-                  );
-                }
-              },
               {
                 key: 'name',
                 label: '원재료명',
@@ -1800,697 +1782,998 @@ export default function AdminDashboard() {
         )}
 
         {/* ==================================================================== */}
-        {/* SUB TAB: LANDING SETTINGS (독립 보존된 랜딩페이지 실시간 설정)        */}
+        {/* SUB TAB: LANDING VISUAL EDITOR (워드프레스형 실시간 비주얼 에디터)     */}
         {/* ==================================================================== */}
         {activeTab === 'landing' && (
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            padding: '28px',
-            border: '1px solid #EAE8E3',
-            boxShadow: '0 4px 20px rgba(180, 160, 120, 0.06)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div className="landing-editor-container">
+            {/* Top Toolbar */}
+            <div className="editor-top-bar" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '14px',
+              padding: '16px 24px',
+              border: '1px solid #EAE8E3',
+              marginBottom: '20px',
+              flexWrap: 'wrap',
+              gap: '14px'
+            }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#2B2A27', margin: 0 }}>
-                  랜딩페이지 설정 (소비자 노출 관리)
+                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#2B2A27', margin: 0 }}>
+                  랜딩페이지 실시간 비주얼 에디터
                 </h2>
-                <p style={{ fontSize: '13px', color: '#6B6862', margin: '4px 0 0 0' }}>
-                  독립 유지되는 메인 랜딩페이지의 공지 팝업 및 헤더 문구를 실시간 변경합니다.
+                <p style={{ fontSize: '13px', color: '#6B6862', margin: '3px 0 0 0' }}>
+                  좌측에서 섹션 순서와 구성을 관리하고, 우측 캔버스의 요소를 클릭해 텍스트와 사진을 실시간으로 수정하세요.
                 </p>
               </div>
-              <button
-                onClick={handleSaveLanding}
-                style={{
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {/* Device Selector */}
+                <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '10px 20px',
+                  backgroundColor: '#FAF6EE',
+                  border: '1px solid #EAE8E3',
                   borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#2D6A4F',
-                  color: '#FFFFFF',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                <Save size={16} /> <span>랜딩 설정 저장</span>
-              </button>
-            </div>
-
-            {/* Section 1: Multi-Popup Settings */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '14px', padding: '22px', marginBottom: '22px', backgroundColor: '#FFFFFF' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
-                  <strong style={{ fontSize: '17px', color: '#2B2A27' }}>1. 공지사항 팝업 관리 (다중 팝업 지원)</strong>
-                  <p style={{ fontSize: '13px', color: '#6B6862', margin: '4px 0 0 0' }}>
-                    여러 개의 팝업을 등록할 수 있으며, 활성화된 팝업들은 메인 랜딩에서 슬라이더(캐러셀)로 넘겨볼 수 있습니다.
-                  </p>
+                  padding: '3px',
+                  gap: '2px'
+                }}>
+                  {[
+                    { id: 'desktop', label: 'PC', icon: Monitor },
+                    { id: 'tablet', label: '태블릿', icon: Tablet },
+                    { id: 'mobile', label: '모바일', icon: Smartphone }
+                  ].map(dev => {
+                    const IconCmp = dev.icon;
+                    const isActive = previewDevice === dev.id;
+                    return (
+                      <button
+                        key={dev.id}
+                        type="button"
+                        onClick={() => setPreviewDevice(dev.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          backgroundColor: isActive ? '#2D6A4F' : 'transparent',
+                          color: isActive ? '#FFFFFF' : '#6B6862',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <IconCmp size={14} />
+                        <span>{dev.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {/* Quick Global Editors */}
                 <button
                   type="button"
-                  onClick={() => setLandingSettings(prev => {
-                    const currentPopups = Array.isArray(prev.popups) && prev.popups.length > 0
-                      ? prev.popups
-                      : (prev.popup ? [{ id: 'popup_1', ...defaultLandingSettings.popups[0], ...prev.popup }] : defaultLandingSettings.popups);
-                    return {
-                      ...prev,
-                      popups: [
-                        ...currentPopups,
-                        {
-                          id: `popup_${Date.now()}`,
-                          enabled: true,
-                          title: '새 공지사항',
-                          content: '공지 내용을 입력하세요.',
-                          image: '',
-                          link: 'https://smartstore.naver.com/kkaburioranda',
-                          linkText: '자세히 보기'
-                        }
-                      ]
-                    };
-                  })}
+                  onClick={() => handleOpenEditModal('popups')}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '8px 14px',
+                    padding: '8px 12px',
                     borderRadius: '8px',
-                    border: '1px solid #2D6A4F',
-                    backgroundColor: '#FAFDFB',
-                    color: '#2D6A4F',
-                    fontSize: '13px',
+                    border: '1px solid #EAE8E3',
+                    backgroundColor: '#FFFFFF',
+                    fontSize: '12px',
                     fontWeight: '700',
+                    color: '#2B2A27',
                     cursor: 'pointer'
                   }}
                 >
-                  <Plus size={15} /> <span>새 팝업 추가</span>
+                  <Sliders size={14} color="#D97706" />
+                  <span>공지 팝업 관리</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditModal('header')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #EAE8E3',
+                    backgroundColor: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: '#2B2A27',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Settings size={14} color="#2563EB" />
+                  <span>상단 메뉴/GNB</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditModal('footer')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #EAE8E3',
+                    backgroundColor: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: '#2B2A27',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Globe size={14} color="#059669" />
+                  <span>푸터/SNS</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveLanding}
+                  disabled={isRefreshing}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#2D6A4F',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(45, 106, 79, 0.25)'
+                  }}
+                >
+                  <Save size={15} />
+                  <span>랜딩 설정 최종 저장</span>
                 </button>
               </div>
+            </div>
 
-              {/* Popups List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {(() => {
-                  const popupsList = Array.isArray(landingSettings.popups) && landingSettings.popups.length > 0
-                    ? landingSettings.popups
-                    : (landingSettings.popup ? [{ id: 'popup_1', ...defaultLandingSettings.popups[0], ...landingSettings.popup }] : defaultLandingSettings.popups);
+            {/* Split Layout: Left Control Panel + Right Canvas */}
+            <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '20px', alignItems: 'start' }}>
+              
+              {/* Left Panel: Section Structure & Order */}
+              <div style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '14px',
+                border: '1px solid #EAE8E3',
+                padding: '18px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Layers size={17} color="#2D6A4F" />
+                    <strong style={{ fontSize: '15px', color: '#2B2A27' }}>섹션 목록 및 순서</strong>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#8C8983', fontWeight: '700' }}>
+                    총 {(landingSettings.sections || []).length}개
+                  </span>
+                </div>
 
-                  return popupsList.map((pop, pIdx) => (
-                    <div 
-                      key={pop.id || pIdx} 
-                      style={{ 
-                        border: '1px solid #EAE8E3', 
-                        borderRadius: '10px', 
-                        padding: '16px', 
-                        backgroundColor: '#FAF9F6' 
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ 
-                            backgroundColor: '#2D6A4F', 
-                            color: '#FFFFFF', 
-                            fontWeight: '800', 
-                            fontSize: '12px', 
-                            padding: '2px 8px', 
-                            borderRadius: '12px' 
-                          }}>
-                            팝업 #{pIdx + 1}
-                          </span>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>
-                            <input
-                              type="checkbox"
-                              checked={pop.enabled || false}
-                              onChange={(e) => {
-                                const checked = e.target.checked;
-                                setLandingSettings(prev => {
-                                  const list = Array.isArray(prev.popups) && prev.popups.length > 0
-                                    ? [...prev.popups]
-                                    : (prev.popup ? [{ id: 'popup_1', ...defaultLandingSettings.popups[0], ...prev.popup }] : [...defaultLandingSettings.popups]);
-                                  list[pIdx] = { ...list[pIdx], enabled: checked };
-                                  return { ...prev, popups: list, popup: list[0] };
-                                });
+                <p style={{ fontSize: '12px', color: '#6B6862', margin: '0 0 14px 0', lineHeight: 1.4 }}>
+                  ▲ / ▼ 버튼으로 섹션 순서를 바꾸고, 눈 아이콘으로 표시 여부를 즉시 토글할 수 있습니다.
+                </p>
+
+                {/* Section List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                  {(landingSettings.sections || []).map((sec, idx) => {
+                    return (
+                      <div
+                        key={sec.id}
+                        style={{
+                          border: sec.enabled ? '1.5px solid #D6D3CC' : '1px dashed #D6D3CC',
+                          borderRadius: '10px',
+                          padding: '12px',
+                          backgroundColor: sec.enabled ? '#FFFFFF' : '#FAF9F6',
+                          opacity: sec.enabled ? 1 : 0.65,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: '#EAE8E3',
+                              color: '#4A4844',
+                              textTransform: 'uppercase'
+                            }}>
+                              {sec.type}
+                            </span>
+                            <strong style={{ fontSize: '13px', color: '#2B2A27' }}>
+                              {sec.name}
+                            </strong>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {/* Up / Down */}
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSection(idx, -1)}
+                              disabled={idx === 0}
+                              style={{
+                                border: '1px solid #EAE8E3',
+                                background: '#FFFFFF',
+                                borderRadius: '4px',
+                                padding: '3px 5px',
+                                cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                                color: idx === 0 ? '#CCC' : '#333'
                               }}
-                            />
-                            <span>팝업 노출 활성화</span>
-                          </label>
+                              title="위로 이동"
+                            >
+                              <ChevronUp size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSection(idx, 1)}
+                              disabled={idx === (landingSettings.sections || []).length - 1}
+                              style={{
+                                border: '1px solid #EAE8E3',
+                                background: '#FFFFFF',
+                                borderRadius: '4px',
+                                padding: '3px 5px',
+                                cursor: idx === (landingSettings.sections || []).length - 1 ? 'not-allowed' : 'pointer',
+                                color: idx === (landingSettings.sections || []).length - 1 ? '#CCC' : '#333'
+                              }}
+                              title="아래로 이동"
+                            >
+                              <ChevronDown size={13} />
+                            </button>
+
+                            {/* Visibility Toggle */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSectionVisibility(sec.id)}
+                              style={{
+                                border: '1px solid #EAE8E3',
+                                background: sec.enabled ? '#D8F3DC' : '#FFFFFF',
+                                color: sec.enabled ? '#2D6A4F' : '#999',
+                                borderRadius: '4px',
+                                padding: '3px 5px',
+                                cursor: 'pointer'
+                              }}
+                              title={sec.enabled ? "화면에서 숨기기" : "화면에 노출하기"}
+                            >
+                              {sec.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
+                            </button>
+
+                            {/* Duplicate */}
+                            <button
+                              type="button"
+                              onClick={() => handleDuplicateSection(sec.id)}
+                              style={{
+                                border: '1px solid #EAE8E3',
+                                background: '#FFFFFF',
+                                color: '#4A4844',
+                                borderRadius: '4px',
+                                padding: '3px 5px',
+                                cursor: 'pointer'
+                              }}
+                              title="이 섹션 복제하기"
+                            >
+                              <Copy size={13} />
+                            </button>
+
+                            {/* Delete */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSection(sec.id)}
+                              style={{
+                                border: '1px solid #EAE8E3',
+                                background: '#FFFFFF',
+                                color: '#C0392B',
+                                borderRadius: '4px',
+                                padding: '3px 5px',
+                                cursor: 'pointer'
+                              }}
+                              title="이 섹션 삭제하기"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
 
-                        {popupsList.length > 1 && (
+                        {/* Quick edit button & GNB link info */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#6B6862', paddingTop: '6px', borderTop: '1px solid #F0EFEA' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span>앵커: <code>#{sec.anchor || sec.id}</code></span>
+                            {sec.showInNav && (
+                              <span style={{ backgroundColor: '#FAF6EE', padding: '1px 5px', borderRadius: '4px', color: '#8C6F3E', fontWeight: '700' }}>
+                                GNB: {sec.navLabel || sec.name}
+                              </span>
+                            )}
+                          </span>
                           <button
                             type="button"
-                            onClick={() => {
-                              if (!confirm(`팝업 #${pIdx + 1}을(를) 삭제하시겠습니까?`)) return;
-                              setLandingSettings(prev => {
-                                const list = (prev.popups || []).filter((_, idx) => idx !== pIdx);
-                                return { ...prev, popups: list, popup: list[0] || defaultLandingSettings.popup };
-                              });
+                            onClick={() => handleOpenEditModal(sec.type, sec.id)}
+                            style={{
+                              border: 'none',
+                              backgroundColor: '#FAF6EE',
+                              color: '#2D6A4F',
+                              fontWeight: '700',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
                             }}
-                            style={{ background: 'none', border: 'none', color: '#C0392B', cursor: 'pointer', padding: '4px' }}
-                            title="팝업 삭제"
                           >
-                            <Trash2 size={16} />
+                            <Edit3 size={11} /> <span>수정</span>
                           </button>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginBottom: '12px' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                            팝업 제목
-                          </label>
-                          <input
-                            type="text"
-                            value={pop.title || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setLandingSettings(prev => {
-                                const list = [...(prev.popups || popupsList)];
-                                list[pIdx] = { ...list[pIdx], title: val };
-                                return { ...prev, popups: list, popup: list[0] };
-                              });
-                            }}
-                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                          />
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                            자세히 보기 링크 URL (선택)
-                          </label>
-                          <input
-                            type="text"
-                            value={pop.link || ''}
-                            placeholder="https://smartstore.naver.com/..."
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setLandingSettings(prev => {
-                                const list = [...(prev.popups || popupsList)];
-                                list[pIdx] = { ...list[pIdx], link: val };
-                                return { ...prev, popups: list, popup: list[0] };
-                              });
-                            }}
-                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                          />
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                            링크 버튼 문구
-                          </label>
-                          <input
-                            type="text"
-                            value={pop.linkText || '자세히 보기'}
-                            placeholder="자세히 보기"
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setLandingSettings(prev => {
-                                const list = [...(prev.popups || popupsList)];
-                                list[pIdx] = { ...list[pIdx], linkText: val };
-                                return { ...prev, popups: list, popup: list[0] };
-                              });
-                            }}
-                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                          />
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
 
-                      <div style={{ marginBottom: '12px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                          공지 본문 내용
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={pop.content || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setLandingSettings(prev => {
-                              const list = [...(prev.popups || popupsList)];
-                              list[pIdx] = { ...list[pIdx], content: val };
-                              return { ...prev, popups: list, popup: list[0] };
-                            });
-                          }}
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                        />
-                      </div>
-
-                      <ImageFieldEditor
-                        label={`팝업 #${pIdx + 1} 첨부 이미지 (선택)`}
-                        value={pop.image || ''}
-                        onChange={(img) => {
-                          setLandingSettings(prev => {
-                            const list = [...(prev.popups || popupsList)];
-                            list[pIdx] = { ...list[pIdx], image: img };
-                            return { ...prev, popups: list, popup: list[0] };
-                          });
+                {/* Add New Section */}
+                <div style={{ borderTop: '1px solid #EAE8E3', paddingTop: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#2B2A27', marginBottom: '8px' }}>
+                    + 새 섹션 추가하기
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    {[
+                      { type: 'hero', label: '히어로 (Hero)' },
+                      { type: 'story', label: '스토리 (Story)' },
+                      { type: 'features', label: '특장점 (Features)' },
+                      { type: 'lineup', label: '제품 (Lineup)' },
+                      { type: 'reviews', label: '후기 (Reviews)' },
+                      { type: 'cta', label: '배너 (CTA)' }
+                    ].map(tmpl => (
+                      <button
+                        key={tmpl.type}
+                        type="button"
+                        onClick={() => handleAddSection(tmpl.type)}
+                        style={{
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #EAE8E3',
+                          backgroundColor: '#FAF9F6',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          color: '#2B2A27',
+                          cursor: 'pointer',
+                          textAlign: 'left'
                         }}
-                        placeholder="공지 이미지 URL 또는 PC 사진 업로드"
+                      >
+                        + {tmpl.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Panel: Interactive Canvas */}
+              <div style={{
+                backgroundColor: '#262624',
+                borderRadius: '14px',
+                padding: '24px 16px',
+                minHeight: '800px',
+                boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.3)',
+                overflowX: 'auto'
+              }}>
+                <div style={{
+                  maxWidth: previewDevice === 'desktop' ? '100%' : (previewDevice === 'tablet' ? '768px' : '390px'),
+                  margin: '0 auto',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: previewDevice === 'desktop' ? '8px' : '24px',
+                  border: previewDevice === 'desktop' ? '1px solid #EAE8E3' : '8px solid #3B3936',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  {/* Canvas Header */}
+                  <div style={{
+                    padding: '16px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderBottom: '1px solid #EAE8E3',
+                    backgroundColor: '#FFFFFF',
+                    position: 'relative'
+                  }} className="canvas-section-hover">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px', fontWeight: '900', color: '#E8A317' }}>
+                        {landingSettings.header?.logoTextEn || 'Yuzu'}
+                      </span>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#2B2A27' }}>
+                        {landingSettings.header?.logoTextKo || '유자품은 오란다&까부리'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <nav style={{ display: previewDevice === 'mobile' ? 'none' : 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: '#6B6862' }}>
+                        {(landingSettings.sections || []).filter(s => s.enabled && s.showInNav).map(s => (
+                          <span key={s.id} style={{ cursor: 'pointer' }}>{s.navLabel || s.name}</span>
+                        ))}
+                      </nav>
+
+                      {landingSettings.header?.showSmartStoreBtn !== false && (
+                        <span style={{
+                          backgroundColor: '#2D6A4F',
+                          color: '#FFFFFF',
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: '700'
+                        }}>
+                          {landingSettings.header?.smartStoreText || '구매하기'}
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal('header')}
+                      className="canvas-edit-overlay-btn"
+                    >
+                      <Edit3 size={13} /> <span>헤더/메뉴 편집</span>
+                    </button>
+                  </div>
+
+                  {/* Canvas Sections Rendering */}
+                  {(landingSettings.sections || []).filter(sec => sec.enabled).map((sec) => {
+                    const data = sec.data || {};
+
+                    if (sec.type === 'hero') {
+                      return (
+                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '60px 24px', backgroundColor: '#FAF9F6', textAlign: 'center', borderBottom: '1px solid #EAE8E3' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal('hero', sec.id)}
+                            className="canvas-edit-overlay-btn"
+                          >
+                            <Edit3 size={13} /> <span>Hero 편집</span>
+                          </button>
+
+                          {data.badge && (
+                            <span style={{ display: 'inline-block', backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3', color: '#8C6F3E', padding: '4px 12px', borderRadius: '16px', fontSize: '11px', fontWeight: '800', marginBottom: '14px' }}>
+                              {data.badge}
+                            </span>
+                          )}
+
+                          <h1 style={{ fontSize: previewDevice === 'mobile' ? '24px' : '36px', fontWeight: '900', color: '#2B2A27', margin: '0 0 16px 0', lineHeight: 1.35, whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                            {data.title || '바삭함 속에 피어나는\n싱그러운 유자 향'}
+                          </h1>
+
+                          <p style={{ fontSize: previewDevice === 'mobile' ? '13px' : '15px', color: '#6B6862', maxWidth: '600px', margin: '0 auto 24px auto', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            {data.subtitle || '100% 국산 유자와 쌀조청의 조화'}
+                          </p>
+
+                          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '28px', flexWrap: 'wrap' }}>
+                            <span style={{ backgroundColor: '#2D6A4F', color: '#FFFFFF', padding: '10px 22px', borderRadius: '24px', fontSize: '13px', fontWeight: '800' }}>
+                              {data.ctaText || '스마트스토어로 구매하기'}
+                            </span>
+                            {data.storyLinkText && (
+                              <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAE8E3', color: '#2B2A27', padding: '10px 18px', borderRadius: '24px', fontSize: '13px', fontWeight: '700' }}>
+                                {data.storyLinkText}
+                              </span>
+                            )}
+                          </div>
+
+                          {data.image && (
+                            <div style={{ maxWidth: '400px', margin: '0 auto', borderRadius: '12px', overflow: 'hidden', border: '1px solid #EAE8E3' }}>
+                              <img src={data.image} alt="Hero" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    if (sec.type === 'story') {
+                      return (
+                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '50px 24px', backgroundColor: '#FFFFFF', borderBottom: '1px solid #EAE8E3' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal('story', sec.id)}
+                            className="canvas-edit-overlay-btn"
+                          >
+                            <Edit3 size={13} /> <span>Story 편집</span>
+                          </button>
+
+                          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'grid', gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : '1fr 1fr', gap: '30px', alignItems: 'center' }}>
+                            <div>
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                                {data.subtitle || 'BRAND STORY'}
+                              </span>
+                              <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '28px', fontWeight: '900', color: '#2B2A27', margin: '8px 0 14px 0', lineHeight: 1.35, whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                                {data.title || '자연에서 온 상큼함과\n전통의 만남'}
+                              </h2>
+                              <strong style={{ display: 'block', fontSize: '14px', color: '#2D6A4F', marginBottom: '10px' }}>
+                                {data.sectionTitle || '딱딱하고 끈적이는 오란다는 잊으세요.'}
+                              </strong>
+                              <p style={{ fontSize: '13px', color: '#6B6862', lineHeight: 1.6, marginBottom: '10px', wordBreak: 'keep-all' }}>
+                                {data.body1}
+                              </p>
+                              <p style={{ fontSize: '13px', color: '#6B6862', lineHeight: 1.6, marginBottom: '16px', wordBreak: 'keep-all' }}>
+                                {data.body2}
+                              </p>
+
+                              {data.featureBadge && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', backgroundColor: '#FAF6EE', borderRadius: '8px', border: '1px solid #EAE8E3' }}>
+                                  <DynamicIcon name={data.featureIcon || 'Leaf'} size={20} color="#2D6A4F" />
+                                  <div>
+                                    <strong style={{ display: 'block', fontSize: '12px', color: '#2B2A27' }}>{data.featureBadge}</strong>
+                                    <span style={{ fontSize: '11px', color: '#6B6862' }}>{data.featureDesc}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {data.image && (
+                              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #EAE8E3' }}>
+                                <img src={data.image} alt="Story" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (sec.type === 'features') {
+                      const items = Array.isArray(data.items) ? data.items : [];
+                      return (
+                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '50px 24px', backgroundColor: '#FAF9F6', borderBottom: '1px solid #EAE8E3' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal('features', sec.id)}
+                            className="canvas-edit-overlay-btn"
+                          >
+                            <Edit3 size={13} /> <span>특장점 편집</span>
+                          </button>
+
+                          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
+                              {data.subtitle || 'KEY FEATURES'}
+                            </span>
+                            <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                              {data.title || '유자품은 오란다&까부리의 약속'}
+                            </h2>
+                          </div>
+
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : `repeat(${Math.min(items.length || 3, 3)}, 1fr)`,
+                            gap: '16px',
+                            maxWidth: '900px',
+                            margin: '0 auto'
+                          }}>
+                            {items.map((it, idx) => (
+                              <div key={it.id || idx} style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #EAE8E3', textAlign: 'center' }}>
+                                <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: '#FAF6EE', border: '1px solid #EAE8E3', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
+                                  <DynamicIcon name={it.icon || 'Sparkles'} size={20} color="#2D6A4F" />
+                                </div>
+                                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#2B2A27', margin: '0 0 8px 0', wordBreak: 'keep-all' }}>
+                                  {it.title}
+                                </h3>
+                                <p style={{ fontSize: '12px', color: '#6B6862', lineHeight: 1.5, margin: 0, wordBreak: 'keep-all' }}>
+                                  {it.desc}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (sec.type === 'lineup') {
+                      const items = Array.isArray(data.items) ? data.items : [];
+                      return (
+                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '50px 24px', backgroundColor: '#FFFFFF', borderBottom: '1px solid #EAE8E3' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal('lineup', sec.id)}
+                            className="canvas-edit-overlay-btn"
+                          >
+                            <Edit3 size={13} /> <span>라인업 편집</span>
+                          </button>
+
+                          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
+                              {data.subtitle || 'PRODUCT LINEUP'}
+                            </span>
+                            <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                              {data.title || '상큼함을 담은 라인업'}
+                            </h2>
+                          </div>
+
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
+                            gap: '16px',
+                            maxWidth: '960px',
+                            margin: '0 auto'
+                          }}>
+                            {items.map((prod, idx) => (
+                              <div key={prod.id || idx} style={{ border: '1px solid #EAE8E3', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ height: '160px', backgroundColor: '#FAF9F6', overflow: 'hidden', position: 'relative' }}>
+                                  {prod.image ? (
+                                    <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '12px' }}>이미지 없음</div>
+                                  )}
+                                  {prod.badge && (
+                                    <span style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: '#2D6A4F', color: '#FFFFFF', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>
+                                      {prod.badge}
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ padding: '14px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                  <div>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#2B2A27', margin: '0 0 4px 0', wordBreak: 'keep-all' }}>{prod.name}</h4>
+                                    <p style={{ fontSize: '11px', color: '#6B6862', margin: '0 0 8px 0', lineHeight: 1.4, wordBreak: 'keep-all' }}>{prod.desc}</p>
+                                  </div>
+                                  <div>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                      <strong style={{ fontSize: '15px', color: '#2D6A4F' }}>{Number(prod.price || 0).toLocaleString()}원</strong>
+                                      {prod.originalPrice ? (
+                                        <span style={{ fontSize: '11px', color: '#A09E9B', textDecoration: 'line-through' }}>{Number(prod.originalPrice).toLocaleString()}원</span>
+                                      ) : null}
+                                    </div>
+                                    <span style={{ fontSize: '10px', color: '#8C6F3E', display: 'block', marginTop: '2px' }}>{prod.unit}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (sec.type === 'reviews') {
+                      const items = Array.isArray(data.items) ? data.items : [];
+                      return (
+                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '50px 24px', backgroundColor: '#FAF9F6', borderBottom: '1px solid #EAE8E3' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal('reviews', sec.id)}
+                            className="canvas-edit-overlay-btn"
+                          >
+                            <Edit3 size={13} /> <span>후기 편집</span>
+                          </button>
+
+                          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8C6F3E', letterSpacing: '1px' }}>
+                              {data.subtitle || 'CUSTOMER REVIEWS'}
+                            </span>
+                            <h2 style={{ fontSize: previewDevice === 'mobile' ? '20px' : '26px', fontWeight: '900', color: '#2B2A27', margin: '6px 0 0 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                              {data.title || '직접 맛보신 분들의 생생한 후기'}
+                            </h2>
+                          </div>
+
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: previewDevice === 'mobile' ? '1fr' : 'repeat(auto-fit, minmax(240px, 1fr))',
+                            gap: '16px',
+                            maxWidth: '900px',
+                            margin: '0 auto'
+                          }}>
+                            {items.map((rev, idx) => (
+                              <div key={rev.id || idx} style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAE8E3', borderRadius: '12px', padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#E8A317', marginBottom: '8px' }}>
+                                  {[...Array(rev.rating || 5)].map((_, i) => (
+                                    <Star key={i} size={14} fill="#E8A317" />
+                                  ))}
+                                </div>
+                                <p style={{ fontSize: '12px', color: '#2B2A27', lineHeight: 1.5, margin: '0 0 12px 0', wordBreak: 'keep-all' }}>
+                                  "{rev.content}"
+                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#8C8983' }}>
+                                  <span>{rev.author} · {rev.product}</span>
+                                  {rev.tag && <span style={{ color: '#2D6A4F', fontWeight: '700' }}>#{rev.tag}</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (sec.type === 'cta') {
+                      return (
+                        <div key={sec.id} className="canvas-section-hover" style={{ position: 'relative', padding: '60px 24px', backgroundColor: '#2D6A4F', color: '#FFFFFF', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal('cta', sec.id)}
+                            className="canvas-edit-overlay-btn"
+                          >
+                            <Edit3 size={13} /> <span>CTA 편집</span>
+                          </button>
+
+                          {data.badge && (
+                            <span style={{ display: 'inline-block', backgroundColor: 'rgba(255,255,255,0.15)', color: '#FFFFFF', padding: '4px 12px', borderRadius: '16px', fontSize: '11px', fontWeight: '700', marginBottom: '14px' }}>
+                              {data.badge}
+                            </span>
+                          )}
+
+                          <h2 style={{ fontSize: previewDevice === 'mobile' ? '22px' : '30px', fontWeight: '900', margin: '0 0 12px 0', whiteSpace: 'pre-line', wordBreak: 'keep-all' }}>
+                            {data.title || '향긋한 고흥 유자의 감동을\n지금 바로 만나보세요'}
+                          </h2>
+
+                          <p style={{ fontSize: '13px', opacity: 0.9, maxWidth: '500px', margin: '0 auto 24px auto', lineHeight: 1.5, wordBreak: 'keep-all' }}>
+                            {data.subtitle || '정성을 다해 정직하게 만든 프리미엄 수제 디저트'}
+                          </p>
+
+                          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <span style={{ backgroundColor: '#FFFFFF', color: '#2D6A4F', padding: '10px 22px', borderRadius: '24px', fontSize: '13px', fontWeight: '800' }}>
+                              {data.ctaText || '스마트스토어로 구매하기'}
+                            </span>
+                            {data.contactText && (
+                              <span style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#FFFFFF', padding: '10px 18px', borderRadius: '24px', fontSize: '13px', fontWeight: '700' }}>
+                                {data.contactText}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })}
+
+                  {/* Canvas Footer */}
+                  <div style={{ padding: '30px 20px', backgroundColor: '#1F1E1D', color: '#999', fontSize: '11px', position: 'relative' }} className="canvas-section-hover">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal('footer')}
+                      className="canvas-edit-overlay-btn"
+                    >
+                      <Edit3 size={13} /> <span>푸터/SNS 편집</span>
+                    </button>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#FFF' }}>
+                        {landingSettings.footer?.companyName || '행복마루'}
+                      </span>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        {(landingSettings.footer?.snsLinks || []).filter(s => s.enabled).map(s => (
+                          <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#FFF' }}>
+                            <DynamicIcon name={s.icon || 'ExternalLink'} size={14} color="#FFF" />
+                            <span>{s.name}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ lineHeight: 1.6 }}>
+                      <span>대표: {landingSettings.footer?.ceo || '김은주'}</span> | 
+                      <span> 사업자등록번호: {landingSettings.footer?.registrationNo || '546-95-01586'}</span><br />
+                      <span>주소: {landingSettings.footer?.address || '전라남도 고흥군 도화면'}</span> | 
+                      <span> 문의: {landingSettings.footer?.phone || '010-8608-2510'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* SUB TAB: PASSWORDS (관리자 및 생산자 비밀번호 통합 관리)              */}
+        {/* ==================================================================== */}
+        {activeTab === 'passwords' && (
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '32px',
+              border: '1px solid #EAE8E3',
+              boxShadow: '0 4px 20px rgba(180, 160, 120, 0.06)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '10px',
+                  backgroundColor: '#FAF6EE',
+                  border: '1px solid #EAE8E3',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#2D6A4F'
+                }}>
+                  <KeyRound size={22} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#2B2A27', margin: 0 }}>
+                    보안 및 비밀번호 관리
+                  </h2>
+                  <p style={{ fontSize: '13px', color: '#6B6862', margin: '4px 0 0 0' }}>
+                    관리자 대시보드와 생산자(포장/제조) 전용 페이지의 접속 비밀번호를 한 곳에서 안전하게 변경합니다.
+                  </p>
+                </div>
+              </div>
+
+              {pwSaveSuccess && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: '#D8F3DC',
+                  color: '#2D6A4F',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <CheckCircle2 size={18} />
+                  <span>{pwSaveSuccess}</span>
+                </div>
+              )}
+
+              {pwSaveError && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: '#FDEDEC',
+                  color: '#C0392B',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <AlertTriangle size={18} />
+                  <span>{pwSaveError}</span>
+                </div>
+              )}
+
+              {/* Grid with 2 Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '28px' }}>
+                {/* Card 1: Admin Password */}
+                <div style={{
+                  border: '1.5px solid #EAE8E3',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  backgroundColor: '#FAFAF8'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                    <Lock size={18} color="#2D6A4F" />
+                    <strong style={{ fontSize: '16px', color: '#2B2A27' }}>관리자 페이지 비밀번호</strong>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6B6862', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                    현재 대시보드 및 전체 설정을 수정할 수 있는 최고 권한 암호입니다. (초기값: <code>yuzu1234</code>)
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#4A4844', marginBottom: '4px' }}>
+                        새 관리자 비밀번호
+                      </label>
+                      <input
+                        type="password"
+                        value={adminNewPw}
+                        onChange={(e) => setAdminNewPw(e.target.value)}
+                        placeholder="새 비밀번호 (4자 이상)"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #D6D3CC',
+                          fontSize: '14px',
+                          backgroundColor: '#FFFFFF'
+                        }}
                       />
                     </div>
-                  ));
-                })()}
-              </div>
-            </div>
-
-            {/* Section 2: Hero Copy, Links & Image Settings */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '14px', padding: '22px', marginBottom: '22px', backgroundColor: '#FFFFFF' }}>
-              <strong style={{ fontSize: '17px', color: '#2B2A27', display: 'block', marginBottom: '14px' }}>
-                2. 메인 배너 (Hero Section) 설정
-              </strong>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    상단 배지 문구
-                  </label>
-                  <input
-                    type="text"
-                    value={landingSettings.hero?.badge || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      hero: { ...prev.hero, badge: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    구매 버튼 문구
-                  </label>
-                  <input
-                    type="text"
-                    value={landingSettings.hero?.ctaText || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      hero: { ...prev.hero, ctaText: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    구매 버튼 링크 URL
-                  </label>
-                  <input
-                    type="text"
-                    value={landingSettings.hero?.ctaLink || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      hero: { ...prev.hero, ctaLink: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    스토리 링크 문구
-                  </label>
-                  <input
-                    type="text"
-                    value={landingSettings.hero?.storyLinkText || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      hero: { ...prev.hero, storyLinkText: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    메인 타이틀
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={landingSettings.hero?.title || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      hero: { ...prev.hero, title: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    서브 타이틀 설명
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={landingSettings.hero?.subtitle || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      hero: { ...prev.hero, subtitle: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-
-              <ImageFieldEditor
-                label="메인 히어로 대표 사진"
-                value={landingSettings.hero?.image || 'images/yuzu_oranda_hero.png'}
-                onChange={(img) => setLandingSettings(prev => ({
-                  ...prev,
-                  hero: { ...prev.hero, image: img }
-                }))}
-                placeholder="메인 비주얼 이미지 URL 또는 PC 사진 업로드"
-              />
-            </div>
-
-            {/* Section 3: Brand Story Copy & Image Settings */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '14px', padding: '22px', marginBottom: '22px', backgroundColor: '#FFFFFF' }}>
-              <strong style={{ fontSize: '17px', color: '#2B2A27', display: 'block', marginBottom: '14px' }}>
-                3. 브랜드 스토리 (Brand Story) 설정
-              </strong>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    서브타이틀
-                  </label>
-                  <input
-                    type="text"
-                    value={landingSettings.brandStory?.subtitle || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      brandStory: { ...prev.brandStory, subtitle: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    강조 특장점 배지 문구
-                  </label>
-                  <input
-                    type="text"
-                    value={landingSettings.brandStory?.featureBadge || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      brandStory: { ...prev.brandStory, featureBadge: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    강조 특장점 설명
-                  </label>
-                  <input
-                    type="text"
-                    value={landingSettings.brandStory?.featureDesc || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      brandStory: { ...prev.brandStory, featureDesc: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    메인 타이틀
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={landingSettings.brandStory?.title || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      brandStory: { ...prev.brandStory, title: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    스토리 소제목
-                  </label>
-                  <input
-                    type="text"
-                    value={landingSettings.brandStory?.sectionTitle || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      brandStory: { ...prev.brandStory, sectionTitle: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    스토리 본문 단락 1
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={landingSettings.brandStory?.body1 || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      brandStory: { ...prev.brandStory, body1: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: '#55524E' }}>
-                    스토리 본문 단락 2
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={landingSettings.brandStory?.body2 || ''}
-                    onChange={(e) => setLandingSettings(prev => ({
-                      ...prev,
-                      brandStory: { ...prev.brandStory, body2: e.target.value }
-                    }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-
-              <ImageFieldEditor
-                label="브랜드 스토리 소개 사진 (제조 과정 및 제품 연출컷)"
-                value={landingSettings.brandStory?.image || 'images/yuzu_classic_oranda.png'}
-                onChange={(img) => setLandingSettings(prev => ({
-                  ...prev,
-                  brandStory: { ...prev.brandStory, image: img }
-                }))}
-                placeholder="스토리 이미지 URL 또는 PC 사진 업로드"
-              />
-            </div>
-
-            {/* Section 4: 4-Product Lineup Full Settings (Name, Desc, Original Price, Sale Price, Unit, Badge, URL, Photo) */}
-            <div style={{ border: '1px solid #EAE8E3', borderRadius: '14px', padding: '22px', backgroundColor: '#FFFFFF' }}>
-              <strong style={{ fontSize: '17px', color: '#2B2A27', display: 'block', marginBottom: '4px' }}>
-                4. 제품 소개 라인업 설정 (가격, 할인, 텍스트, 링크, 사진 전체)
-              </strong>
-              <p style={{ fontSize: '13px', color: '#6B6862', margin: '0 0 18px 0' }}>
-                메인 랜딩페이지의 4종 세트 상품 카드에 노출되는 모든 가격, 할인율, 텍스트, 구매 링크, 사진을 직접 변경합니다.
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
-                {[
-                  { key: 'deundeun', label: '1. [든든세트] (18개입)' },
-                  { key: 'silsok', label: '2. [실속세트] (12개입)' },
-                  { key: 'mini', label: '3. [미니세트] (6개입)' },
-                  { key: 'natgae', label: '4. [낱개] (1개입)' }
-                ].map(({ key, label }) => {
-                  const prod = landingSettings.products?.[key] || defaultLandingSettings.products[key] || {};
-                  const origPrice = Number(prod.originalPrice) || 0;
-                  const price = Number(prod.price) || 0;
-                  const discount = origPrice > price ? Math.round((origPrice - price) / origPrice * 100) : 0;
-
-                  return (
-                    <div 
-                      key={key} 
-                      style={{ 
-                        border: '1px solid #EAE8E3', 
-                        borderRadius: '12px', 
-                        padding: '16px', 
-                        backgroundColor: '#FAF9F6' 
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <strong style={{ fontSize: '15px', color: '#2B2A27' }}>{label}</strong>
-                        {discount > 0 ? (
-                          <span style={{ backgroundColor: '#D8F3DC', color: '#2D6A4F', fontSize: '12px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>
-                            -{discount}% 할인 적용중
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '12px', color: '#8C8983' }}>할인 없음</span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
-                            상품명
-                          </label>
-                          <input
-                            type="text"
-                            value={prod.name || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setLandingSettings(prev => ({
-                                ...prev,
-                                products: {
-                                  ...prev.products,
-                                  [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), name: val }
-                                }
-                              }));
-                            }}
-                            style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                          />
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
-                            상품 설명
-                          </label>
-                          <textarea
-                            rows={2}
-                            value={prod.desc || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setLandingSettings(prev => ({
-                                ...prev,
-                                products: {
-                                  ...prev.products,
-                                  [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), desc: val }
-                                }
-                              }));
-                            }}
-                            style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                          />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
-                              정가 (원)
-                            </label>
-                            <input
-                              type="number"
-                              value={prod.originalPrice !== undefined ? prod.originalPrice : 0}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                setLandingSettings(prev => ({
-                                  ...prev,
-                                  products: {
-                                    ...prev.products,
-                                    [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), originalPrice: val }
-                                  }
-                                }));
-                              }}
-                              style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                            />
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
-                              판매가 (원)
-                            </label>
-                            <input
-                              type="number"
-                              value={prod.price !== undefined ? prod.price : 0}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                setLandingSettings(prev => ({
-                                  ...prev,
-                                  products: {
-                                    ...prev.products,
-                                    [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), price: val }
-                                  }
-                                }));
-                              }}
-                              style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                            />
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
-                              구성 단위 문구
-                            </label>
-                            <input
-                              type="text"
-                              value={prod.unit || ''}
-                              placeholder="(18개입 / 1박스)"
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setLandingSettings(prev => ({
-                                  ...prev,
-                                  products: {
-                                    ...prev.products,
-                                    [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), unit: val }
-                                  }
-                                }));
-                              }}
-                              style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                            />
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
-                              배지 문구 (예: Best, 추천)
-                            </label>
-                            <input
-                              type="text"
-                              value={prod.badge || ''}
-                              placeholder="Best, 추천, 인기"
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setLandingSettings(prev => ({
-                                  ...prev,
-                                  products: {
-                                    ...prev.products,
-                                    [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), badge: val }
-                                  }
-                                }));
-                              }}
-                              style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '3px', color: '#55524E' }}>
-                            스마트스토어 구매 링크 URL
-                          </label>
-                          <input
-                            type="text"
-                            value={prod.url || ''}
-                            placeholder="https://smartstore.naver.com/..."
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setLandingSettings(prev => ({
-                                ...prev,
-                                products: {
-                                  ...prev.products,
-                                  [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), url: val }
-                                }
-                              }));
-                            }}
-                            style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
-                          />
-                        </div>
-
-                        <ImageFieldEditor
-                          label="상품 사진"
-                          value={prod.image || defaultLandingSettings.products[key].image}
-                          onChange={(img) => {
-                            setLandingSettings(prev => ({
-                              ...prev,
-                              products: {
-                                ...prev.products,
-                                [key]: { ...(prev.products?.[key] || defaultLandingSettings.products[key] || {}), image: img }
-                              }
-                            }));
-                          }}
-                        />
-                      </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#4A4844', marginBottom: '4px' }}>
+                        새 관리자 비밀번호 확인
+                      </label>
+                      <input
+                        type="password"
+                        value={adminConfirmPw}
+                        onChange={(e) => setAdminConfirmPw(e.target.value)}
+                        placeholder="새 비밀번호 다시 입력"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #D6D3CC',
+                          fontSize: '14px',
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      />
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+
+                {/* Card 2: Producer Password */}
+                <div style={{
+                  border: '1.5px solid #EAE8E3',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  backgroundColor: '#FAFAF8'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                    <Package size={18} color="#D97706" />
+                    <strong style={{ fontSize: '16px', color: '#2B2A27' }}>생산자(작업자) 페이지 비밀번호</strong>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6B6862', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                    현장 제조/포장 담당자가 재고와 주문 상태를 확인하는 전용 암호입니다. (초기값: <code>maker1234</code>)
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#4A4844', marginBottom: '4px' }}>
+                        새 생산자 비밀번호
+                      </label>
+                      <input
+                        type="password"
+                        value={producerNewPw}
+                        onChange={(e) => setProducerNewPw(e.target.value)}
+                        placeholder="새 비밀번호 (4자 이상)"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #D6D3CC',
+                          fontSize: '14px',
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#4A4844', marginBottom: '4px' }}>
+                        새 생산자 비밀번호 확인
+                      </label>
+                      <input
+                        type="password"
+                        value={producerConfirmPw}
+                        onChange={(e) => setProducerConfirmPw(e.target.value)}
+                        placeholder="새 비밀번호 다시 입력"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #D6D3CC',
+                          fontSize: '14px',
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleSavePasswords}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 28px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#2D6A4F',
+                    color: '#FFFFFF',
+                    fontSize: '14px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(45, 106, 79, 0.25)'
+                  }}
+                >
+                  <Save size={16} />
+                  <span>비밀번호 저장하기</span>
+                </button>
               </div>
             </div>
           </div>
@@ -3077,6 +3360,1196 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+      </ModalPopup>
+
+      {/* ====================================================================== */}
+      {/* MODAL 6: VISUAL LANDING EDITOR MODAL POPUP                             */}
+      {/* ====================================================================== */}
+      <ModalPopup
+        isOpen={editingModal.isOpen}
+        onClose={() => setEditingModal({ isOpen: false, type: null, targetId: null, data: null })}
+        title={(() => {
+          switch (editingModal.type) {
+            case 'hero': return '메인 히어로 (Hero) 섹션 수정';
+            case 'story': return '브랜드 스토리 (Story) 섹션 수정';
+            case 'features': return '핵심 특장점 (Features) 섹션 수정';
+            case 'lineup': return '제품 소개 (Lineup) 섹션 수정';
+            case 'reviews': return '고객 리뷰 (Reviews) 섹션 수정';
+            case 'cta': return '하단 배너 (CTA) 섹션 수정';
+            case 'header': return '상단 헤더 및 GNB 메뉴 설정';
+            case 'footer': return '푸터 정보 및 SNS 링크 설정';
+            case 'popups': return '공지사항 팝업 관리';
+            default: return '섹션 설정 수정';
+          }
+        })()}
+        subtitle="원하는 텍스트와 사진을 수정하고 '변경사항 적용'을 누르면 실시간 캔버스에 즉시 반영됩니다."
+        footerActions={
+          <>
+            <button
+              type="button"
+              onClick={() => setEditingModal({ isOpen: false, type: null, targetId: null, data: null })}
+              style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #EAE8E3', background: '#FFFFFF', cursor: 'pointer', fontWeight: '600' }}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveEditModal}
+              style={{ padding: '10px 22px', borderRadius: '8px', border: 'none', background: '#2D6A4F', color: '#FFFFFF', cursor: 'pointer', fontWeight: '700' }}
+            >
+              변경사항 적용
+            </button>
+          </>
+        }
+      >
+        {editingModal.data && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
+            
+            {/* Section Common Meta Header (Anchor & GNB) */}
+            {editingModal.targetId && (
+              <div style={{ backgroundColor: '#FAF6EE', padding: '12px', borderRadius: '8px', border: '1px solid #EAE8E3', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#6B6862', marginBottom: '2px' }}>섹션 관리명</label>
+                  <input
+                    type="text"
+                    value={editingModal.data.name || ''}
+                    onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, name: e.target.value } }))}
+                    style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#6B6862', marginBottom: '2px' }}>페이지 앵커 ID (#)</label>
+                  <input
+                    type="text"
+                    value={editingModal.data.anchor || ''}
+                    onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, anchor: e.target.value } }))}
+                    style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                  />
+                </div>
+                <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editingModal.data.showInNav || false}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, showInNav: e.target.checked } }))}
+                    />
+                    <span>상단 GNB 메뉴에 노출</span>
+                  </label>
+                  {editingModal.data.showInNav && (
+                    <input
+                      type="text"
+                      value={editingModal.data.navLabel || ''}
+                      placeholder="메뉴 표시명"
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, navLabel: e.target.value } }))}
+                      style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px', flexGrow: 1 }}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 1. HERO EDITOR */}
+            {editingModal.type === 'hero' && (() => {
+              const d = editingModal.data.data || {};
+              const updateHero = (field, val) => {
+                setEditingModal(prev => ({
+                  ...prev,
+                  data: {
+                    ...prev.data,
+                    data: { ...(prev.data.data || {}), [field]: val }
+                  }
+                }));
+              };
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상단 배지 문구</label>
+                    <input
+                      type="text"
+                      value={d.badge || ''}
+                      onChange={(e) => updateHero('badge', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                      메인 타이틀 (Enter 줄바꿈 엄격 반영)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={d.title || ''}
+                      onChange={(e) => updateHero('title', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', lineHeight: 1.5 }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#2D6A4F', marginTop: '2px', display: 'block' }}>
+                      💡 Enter로 줄바꿈을 입력하시면 실제 랜딩페이지에 줄바꿈이 그대로 반영됩니다.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>서브타이틀 설명 문구</label>
+                    <textarea
+                      rows={2}
+                      value={d.subtitle || ''}
+                      onChange={(e) => updateHero('subtitle', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', lineHeight: 1.5 }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>구매 버튼 문구</label>
+                      <input
+                        type="text"
+                        value={d.ctaText || ''}
+                        onChange={(e) => updateHero('ctaText', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>구매 링크 URL</label>
+                      <input
+                        type="text"
+                        value={d.ctaLink || ''}
+                        onChange={(e) => updateHero('ctaLink', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>스토리 링크 문구</label>
+                    <input
+                      type="text"
+                      value={d.storyLinkText || ''}
+                      onChange={(e) => updateHero('storyLinkText', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+
+                  <ImageFieldEditor
+                    label="대표 비주얼 이미지"
+                    value={d.image || 'images/yuzu_oranda_hero.png'}
+                    onChange={(img) => updateHero('image', img)}
+                  />
+                </div>
+              );
+            })()}
+
+            {/* 2. STORY EDITOR */}
+            {editingModal.type === 'story' && (() => {
+              const d = editingModal.data.data || {};
+              const updateStory = (field, val) => {
+                setEditingModal(prev => ({
+                  ...prev,
+                  data: {
+                    ...prev.data,
+                    data: { ...(prev.data.data || {}), [field]: val }
+                  }
+                }));
+              };
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>소제목 (서브타이틀)</label>
+                      <input
+                        type="text"
+                        value={d.subtitle || ''}
+                        onChange={(e) => updateStory('subtitle', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>스토리 헤드라인</label>
+                      <input
+                        type="text"
+                        value={d.sectionTitle || ''}
+                        onChange={(e) => updateStory('sectionTitle', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                      메인 타이틀 (Enter 줄바꿈 반영)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={d.title || ''}
+                      onChange={(e) => updateStory('title', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', lineHeight: 1.5 }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#2D6A4F', marginTop: '2px', display: 'block' }}>
+                      💡 Enter로 줄바꿈을 입력하시면 실제 랜딩페이지에 줄바꿈이 그대로 반영됩니다.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>스토리 본문 단락 1</label>
+                    <textarea
+                      rows={3}
+                      value={d.body1 || ''}
+                      onChange={(e) => updateStory('body1', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', lineHeight: 1.5 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>스토리 본문 단락 2</label>
+                    <textarea
+                      rows={3}
+                      value={d.body2 || ''}
+                      onChange={(e) => updateStory('body2', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', lineHeight: 1.5 }}
+                    />
+                  </div>
+
+                  <div style={{ backgroundColor: '#FAF6EE', padding: '12px', borderRadius: '8px', border: '1px solid #EAE8E3' }}>
+                    <strong style={{ fontSize: '13px', color: '#2B2A27', display: 'block', marginBottom: '8px' }}>강조 특장점 배지 & 아이콘</strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', marginBottom: '10px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '3px' }}>배지 문구</label>
+                        <input
+                          type="text"
+                          value={d.featureBadge || ''}
+                          onChange={(e) => updateStory('featureBadge', e.target.value)}
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '3px' }}>배지 설명</label>
+                        <input
+                          type="text"
+                          value={d.featureDesc || ''}
+                          onChange={(e) => updateStory('featureDesc', e.target.value)}
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '3px' }}>아이콘 선택 (현재: {d.featureIcon || 'Leaf'})</label>
+                      <IconPicker
+                        selectedIcon={d.featureIcon || 'Leaf'}
+                        onSelect={(iconName) => updateStory('featureIcon', iconName)}
+                      />
+                    </div>
+                  </div>
+
+                  <ImageFieldEditor
+                    label="스토리 연출 사진"
+                    value={d.image || 'images/yuzu_classic_oranda.png'}
+                    onChange={(img) => updateStory('image', img)}
+                  />
+                </div>
+              );
+            })()}
+
+            {/* 3. FEATURES EDITOR */}
+            {editingModal.type === 'features' && (() => {
+              const d = editingModal.data.data || {};
+              const items = Array.isArray(d.items) ? d.items : [];
+              const updateFeatures = (field, val) => {
+                setEditingModal(prev => ({
+                  ...prev,
+                  data: {
+                    ...prev.data,
+                    data: { ...(prev.data.data || {}), [field]: val }
+                  }
+                }));
+              };
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>서브타이틀</label>
+                      <input
+                        type="text"
+                        value={d.subtitle || ''}
+                        onChange={(e) => updateFeatures('subtitle', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>메인 타이틀</label>
+                      <input
+                        type="text"
+                        value={d.title || ''}
+                        onChange={(e) => updateFeatures('title', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #EAE8E3', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <strong style={{ fontSize: '14px', color: '#2B2A27' }}>특장점 카드 목록 ({items.length}개)</strong>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newItems = [...items, { id: `feat_${Date.now()}`, icon: 'Sparkles', title: '새 특장점', desc: '특장점 상세 설명을 입력하세요.' }];
+                          updateFeatures('items', newItems);
+                        }}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #2D6A4F', backgroundColor: '#FAFDFB', color: '#2D6A4F', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        + 특장점 카드 추가
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {items.map((item, idx) => (
+                        <div key={item.id || idx} style={{ border: '1px solid #EAE8E3', borderRadius: '8px', padding: '12px', backgroundColor: '#FAF9F6' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <strong style={{ fontSize: '13px', color: '#2D6A4F' }}>카드 #{idx + 1}</strong>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newItems = items.filter((_, i) => i !== idx);
+                                updateFeatures('items', newItems);
+                              }}
+                              style={{ border: 'none', background: 'none', color: '#C0392B', cursor: 'pointer' }}
+                              title="삭제"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>카드 제목</label>
+                            <input
+                              type="text"
+                              value={item.title || ''}
+                              onChange={(e) => {
+                                const newItems = [...items];
+                                newItems[idx] = { ...newItems[idx], title: e.target.value };
+                                updateFeatures('items', newItems);
+                              }}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                            />
+                          </div>
+
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>카드 상세 설명</label>
+                            <textarea
+                              rows={2}
+                              value={item.desc || ''}
+                              onChange={(e) => {
+                                const newItems = [...items];
+                                newItems[idx] = { ...newItems[idx], desc: e.target.value };
+                                updateFeatures('items', newItems);
+                              }}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>아이콘 선택 (현재: {item.icon || 'Sparkles'})</label>
+                            <IconPicker
+                              selectedIcon={item.icon || 'Sparkles'}
+                              onSelect={(iconName) => {
+                                const newItems = [...items];
+                                newItems[idx] = { ...newItems[idx], icon: iconName };
+                                updateFeatures('items', newItems);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 4. LINEUP EDITOR */}
+            {editingModal.type === 'lineup' && (() => {
+              const d = editingModal.data.data || {};
+              const items = Array.isArray(d.items) ? d.items : [];
+              const updateLineup = (field, val) => {
+                setEditingModal(prev => ({
+                  ...prev,
+                  data: {
+                    ...prev.data,
+                    data: { ...(prev.data.data || {}), [field]: val }
+                  }
+                }));
+              };
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>서브타이틀</label>
+                      <input
+                        type="text"
+                        value={d.subtitle || ''}
+                        onChange={(e) => updateLineup('subtitle', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>메인 타이틀</label>
+                      <input
+                        type="text"
+                        value={d.title || ''}
+                        onChange={(e) => updateLineup('title', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #EAE8E3', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <strong style={{ fontSize: '14px', color: '#2B2A27' }}>제품 카드 목록 ({items.length}개)</strong>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newItems = [...items, {
+                            id: `card_${Date.now()}`,
+                            name: '새 세트 상품',
+                            desc: '상품 구성을 입력하세요.',
+                            originalPrice: 20000,
+                            price: 18000,
+                            unit: '(12개입 / 1박스)',
+                            badge: '추천',
+                            url: 'https://smartstore.naver.com/kkaburioranda',
+                            image: ''
+                          }];
+                          updateLineup('items', newItems);
+                        }}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #2D6A4F', backgroundColor: '#FAFDFB', color: '#2D6A4F', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        + 제품 카드 추가
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {items.map((prod, idx) => (
+                        <div key={prod.id || idx} style={{ border: '1px solid #EAE8E3', borderRadius: '10px', padding: '14px', backgroundColor: '#FAF9F6' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <strong style={{ fontSize: '13px', color: '#2D6A4F' }}>제품 #{idx + 1}: {prod.name}</strong>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newItems = items.filter((_, i) => i !== idx);
+                                updateLineup('items', newItems);
+                              }}
+                              style={{ border: 'none', background: 'none', color: '#C0392B', cursor: 'pointer' }}
+                              title="삭제"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>상품명</label>
+                              <input
+                                type="text"
+                                value={prod.name || ''}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], name: e.target.value };
+                                  updateLineup('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>배지 (Best 등)</label>
+                              <input
+                                type="text"
+                                value={prod.badge || ''}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], badge: e.target.value };
+                                  updateLineup('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>상품 설명</label>
+                            <input
+                              type="text"
+                              value={prod.desc || ''}
+                              onChange={(e) => {
+                                const newItems = [...items];
+                                newItems[idx] = { ...newItems[idx], desc: e.target.value };
+                                updateLineup('items', newItems);
+                              }}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                            />
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>정가 (원)</label>
+                              <input
+                                type="number"
+                                value={prod.originalPrice || 0}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], originalPrice: Number(e.target.value) };
+                                  updateLineup('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>판매가 (원)</label>
+                              <input
+                                type="number"
+                                value={prod.price || 0}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], price: Number(e.target.value) };
+                                  updateLineup('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>구성 단위</label>
+                              <input
+                                type="text"
+                                value={prod.unit || ''}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], unit: e.target.value };
+                                  updateLineup('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>스마트스토어 구매 링크</label>
+                            <input
+                              type="text"
+                              value={prod.url || ''}
+                              onChange={(e) => {
+                                const newItems = [...items];
+                                newItems[idx] = { ...newItems[idx], url: e.target.value };
+                                updateLineup('items', newItems);
+                              }}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                            />
+                          </div>
+
+                          <ImageFieldEditor
+                            label="상품 사진"
+                            value={prod.image || ''}
+                            onChange={(img) => {
+                              const newItems = [...items];
+                              newItems[idx] = { ...newItems[idx], image: img };
+                              updateLineup('items', newItems);
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 5. REVIEWS EDITOR */}
+            {editingModal.type === 'reviews' && (() => {
+              const d = editingModal.data.data || {};
+              const items = Array.isArray(d.items) ? d.items : [];
+              const updateReviews = (field, val) => {
+                setEditingModal(prev => ({
+                  ...prev,
+                  data: {
+                    ...prev.data,
+                    data: { ...(prev.data.data || {}), [field]: val }
+                  }
+                }));
+              };
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>서브타이틀</label>
+                      <input
+                        type="text"
+                        value={d.subtitle || ''}
+                        onChange={(e) => updateReviews('subtitle', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>메인 타이틀</label>
+                      <input
+                        type="text"
+                        value={d.title || ''}
+                        onChange={(e) => updateReviews('title', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #EAE8E3', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <strong style={{ fontSize: '14px', color: '#2B2A27' }}>고객 후기 목록 ({items.length}개)</strong>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newItems = [...items, {
+                            id: `rev_${Date.now()}`,
+                            author: '고객명',
+                            product: '든든세트 구매',
+                            rating: 5,
+                            content: '정말 부드럽고 유자 향이 향긋해서 온 가족이 맛있게 먹었습니다!',
+                            date: '2026.03',
+                            tag: '베스트리뷰'
+                          }];
+                          updateReviews('items', newItems);
+                        }}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #2D6A4F', backgroundColor: '#FAFDFB', color: '#2D6A4F', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        + 후기 추가
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {items.map((rev, idx) => (
+                        <div key={rev.id || idx} style={{ border: '1px solid #EAE8E3', borderRadius: '8px', padding: '12px', backgroundColor: '#FAF9F6' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <strong style={{ fontSize: '13px', color: '#2D6A4F' }}>후기 #{idx + 1} ({rev.author})</strong>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newItems = items.filter((_, i) => i !== idx);
+                                updateReviews('items', newItems);
+                              }}
+                              style={{ border: 'none', background: 'none', color: '#C0392B', cursor: 'pointer' }}
+                              title="삭제"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: '8px', marginBottom: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>작성자</label>
+                              <input
+                                type="text"
+                                value={rev.author || ''}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], author: e.target.value };
+                                  updateReviews('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>구매 상품</label>
+                              <input
+                                type="text"
+                                value={rev.product || ''}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], product: e.target.value };
+                                  updateReviews('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>별점</label>
+                              <select
+                                value={rev.rating || 5}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], rating: Number(e.target.value) };
+                                  updateReviews('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 4px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              >
+                                {[5, 4, 3, 2, 1].map(r => (
+                                  <option key={r} value={r}>★ {r}점</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>후기 본문 내용</label>
+                            <textarea
+                              rows={2}
+                              value={rev.content || ''}
+                              onChange={(e) => {
+                                const newItems = [...items];
+                                newItems[idx] = { ...newItems[idx], content: e.target.value };
+                                updateReviews('items', newItems);
+                              }}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                            />
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>작성 일자</label>
+                              <input
+                                type="text"
+                                value={rev.date || ''}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], date: e.target.value };
+                                  updateReviews('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>태그</label>
+                              <input
+                                type="text"
+                                value={rev.tag || ''}
+                                onChange={(e) => {
+                                  const newItems = [...items];
+                                  newItems[idx] = { ...newItems[idx], tag: e.target.value };
+                                  updateReviews('items', newItems);
+                                }}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 6. CTA EDITOR */}
+            {editingModal.type === 'cta' && (() => {
+              const d = editingModal.data.data || {};
+              const updateCta = (field, val) => {
+                setEditingModal(prev => ({
+                  ...prev,
+                  data: {
+                    ...prev.data,
+                    data: { ...(prev.data.data || {}), [field]: val }
+                  }
+                }));
+              };
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상단 배지 문구</label>
+                    <input
+                      type="text"
+                      value={d.badge || ''}
+                      onChange={(e) => updateCta('badge', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                      메인 타이틀 (Enter 줄바꿈 반영)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={d.title || ''}
+                      onChange={(e) => updateCta('title', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px', lineHeight: 1.5 }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#2D6A4F', marginTop: '2px', display: 'block' }}>
+                      💡 Enter로 줄바꿈을 입력하시면 실제 랜딩페이지에 줄바꿈이 그대로 반영됩니다.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>서브타이틀 설명 문구</label>
+                    <input
+                      type="text"
+                      value={d.subtitle || ''}
+                      onChange={(e) => updateCta('subtitle', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>구매 버튼 문구</label>
+                      <input
+                        type="text"
+                        value={d.ctaText || ''}
+                        onChange={(e) => updateCta('ctaText', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>구매 링크 URL</label>
+                      <input
+                        type="text"
+                        value={d.ctaLink || ''}
+                        onChange={(e) => updateCta('ctaLink', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>문의 버튼 문구</label>
+                      <input
+                        type="text"
+                        value={d.contactText || ''}
+                        onChange={(e) => updateCta('contactText', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>문의 링크 URL</label>
+                      <input
+                        type="text"
+                        value={d.contactLink || ''}
+                        onChange={(e) => updateCta('contactLink', e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 7. HEADER & GNB EDITOR */}
+            {editingModal.type === 'header' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상단 영문 로고 문구</label>
+                    <input
+                      type="text"
+                      value={editingModal.data.logoTextEn || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, logoTextEn: e.target.value } }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상단 한글 상호 문구</label>
+                    <input
+                      type="text"
+                      value={editingModal.data.logoTextKo || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, logoTextKo: e.target.value } }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ border: '1px solid #EAE8E3', borderRadius: '8px', padding: '12px', backgroundColor: '#FAF6EE' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', marginBottom: '10px' }}>
+                    <input
+                      type="checkbox"
+                      checked={editingModal.data.showSmartStoreBtn !== false}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, showSmartStoreBtn: e.target.checked } }))}
+                    />
+                    <span>상단 네이버 스마트스토어 구매 바로가기 버튼 노출</span>
+                  </label>
+
+                  {editingModal.data.showSmartStoreBtn !== false && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>버튼 문구</label>
+                        <input
+                          type="text"
+                          value={editingModal.data.smartStoreText || ''}
+                          onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, smartStoreText: e.target.value } }))}
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>스마트스토어 URL</label>
+                        <input
+                          type="text"
+                          value={editingModal.data.smartStoreUrl || ''}
+                          onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, smartStoreUrl: e.target.value } }))}
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 8. FOOTER & SNS EDITOR */}
+            {editingModal.type === 'footer' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>상호명</label>
+                    <input
+                      type="text"
+                      value={editingModal.data.companyName || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, companyName: e.target.value } }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>대표자 성명</label>
+                    <input
+                      type="text"
+                      value={editingModal.data.ceo || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, ceo: e.target.value } }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>사업자등록번호</label>
+                    <input
+                      type="text"
+                      value={editingModal.data.registrationNo || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, registrationNo: e.target.value } }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>고객센터 연락처</label>
+                    <input
+                      type="text"
+                      value={editingModal.data.phone || ''}
+                      onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, phone: e.target.value } }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>사업장 주소</label>
+                  <input
+                    type="text"
+                    value={editingModal.data.address || ''}
+                    onChange={(e) => setEditingModal(prev => ({ ...prev, data: { ...prev.data, address: e.target.value } }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #EAE8E3', fontSize: '13px' }}
+                  />
+                </div>
+
+                {/* SNS Links Management */}
+                <div style={{ borderTop: '1px solid #EAE8E3', paddingTop: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <strong style={{ fontSize: '13px', color: '#2B2A27' }}>푸터 SNS 채널 링크 목록</strong>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = Array.isArray(editingModal.data.snsLinks) ? editingModal.data.snsLinks : [];
+                        setEditingModal(prev => ({
+                          ...prev,
+                          data: {
+                            ...prev.data,
+                            snsLinks: [...current, { id: `sns_${Date.now()}`, name: '새 SNS', icon: 'ExternalLink', url: '', enabled: true }]
+                          }
+                        }));
+                      }}
+                      style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #2D6A4F', backgroundColor: '#FAFDFB', color: '#2D6A4F', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      + SNS 추가
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(Array.isArray(editingModal.data.snsLinks) ? editingModal.data.snsLinks : []).map((sns, idx) => (
+                      <div key={sns.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', backgroundColor: '#FAF9F6', borderRadius: '6px', border: '1px solid #EAE8E3' }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={sns.enabled !== false}
+                            onChange={(e) => {
+                              const newLinks = [...editingModal.data.snsLinks];
+                              newLinks[idx] = { ...newLinks[idx], enabled: e.target.checked };
+                              setEditingModal(prev => ({ ...prev, data: { ...prev.data, snsLinks: newLinks } }));
+                            }}
+                          />
+                          <span>노출</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={sns.name || ''}
+                          placeholder="채널명"
+                          onChange={(e) => {
+                            const newLinks = [...editingModal.data.snsLinks];
+                            newLinks[idx] = { ...newLinks[idx], name: e.target.value };
+                            setEditingModal(prev => ({ ...prev, data: { ...prev.data, snsLinks: newLinks } }));
+                          }}
+                          style={{ width: '100px', padding: '5px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                        />
+                        <input
+                          type="text"
+                          value={sns.url || ''}
+                          placeholder="https://..."
+                          onChange={(e) => {
+                            const newLinks = [...editingModal.data.snsLinks];
+                            newLinks[idx] = { ...newLinks[idx], url: e.target.value };
+                            setEditingModal(prev => ({ ...prev, data: { ...prev.data, snsLinks: newLinks } }));
+                          }}
+                          style={{ flexGrow: 1, padding: '5px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newLinks = editingModal.data.snsLinks.filter((_, i) => i !== idx);
+                            setEditingModal(prev => ({ ...prev, data: { ...prev.data, snsLinks: newLinks } }));
+                          }}
+                          style={{ border: 'none', background: 'none', color: '#C0392B', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 9. POPUPS EDITOR */}
+            {editingModal.type === 'popups' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p style={{ fontSize: '13px', color: '#6B6862', margin: 0 }}>
+                    다중 팝업을 등록할 수 있으며 활성화된 팝업은 메인 페이지 방문 시 모달/슬라이더로 노출됩니다.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = Array.isArray(editingModal.data) ? editingModal.data : [];
+                      setEditingModal(prev => ({
+                        ...prev,
+                        data: [...current, {
+                          id: `popup_${Date.now()}`,
+                          enabled: true,
+                          title: '새 공지사항',
+                          content: '공지사항 내용을 입력하세요.',
+                          image: '',
+                          link: 'https://smartstore.naver.com/kkaburioranda',
+                          linkText: '자세히 보기'
+                        }]
+                      }));
+                    }}
+                    style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #2D6A4F', backgroundColor: '#FAFDFB', color: '#2D6A4F', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    + 새 공지 팝업 추가
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {(Array.isArray(editingModal.data) ? editingModal.data : []).map((pop, idx) => (
+                    <div key={pop.id || idx} style={{ border: pop.enabled ? '1.5px solid #2D6A4F' : '1px dashed #D6D3CC', borderRadius: '10px', padding: '14px', backgroundColor: pop.enabled ? '#FFFFFF' : '#FAF9F6' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={pop.enabled || false}
+                            onChange={(e) => {
+                              const list = [...editingModal.data];
+                              list[idx] = { ...list[idx], enabled: e.target.checked };
+                              setEditingModal(prev => ({ ...prev, data: list }));
+                            }}
+                          />
+                          <span style={{ color: pop.enabled ? '#2D6A4F' : '#6B6862' }}>팝업 #{idx + 1} {pop.enabled ? '(노출 활성화)' : '(비활성화)'}</span>
+                        </label>
+
+                        {editingModal.data.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const list = editingModal.data.filter((_, i) => i !== idx);
+                              setEditingModal(prev => ({ ...prev, data: list }));
+                            }}
+                            style={{ border: 'none', background: 'none', color: '#C0392B', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>팝업 제목</label>
+                          <input
+                            type="text"
+                            value={pop.title || ''}
+                            onChange={(e) => {
+                              const list = [...editingModal.data];
+                              list[idx] = { ...list[idx], title: e.target.value };
+                              setEditingModal(prev => ({ ...prev, data: list }));
+                            }}
+                            style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>버튼 표시 문구</label>
+                          <input
+                            type="text"
+                            value={pop.linkText || ''}
+                            onChange={(e) => {
+                              const list = [...editingModal.data];
+                              list[idx] = { ...list[idx], linkText: e.target.value };
+                              setEditingModal(prev => ({ ...prev, data: list }));
+                            }}
+                            style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>버튼 이동 링크 URL</label>
+                        <input
+                          type="text"
+                          value={pop.link || ''}
+                          onChange={(e) => {
+                            const list = [...editingModal.data];
+                            list[idx] = { ...list[idx], link: e.target.value };
+                            setEditingModal(prev => ({ ...prev, data: list }));
+                          }}
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>공지 본문 내용</label>
+                        <textarea
+                          rows={2}
+                          value={pop.content || ''}
+                          onChange={(e) => {
+                            const list = [...editingModal.data];
+                            list[idx] = { ...list[idx], content: e.target.value };
+                            setEditingModal(prev => ({ ...prev, data: list }));
+                          }}
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #D6D3CC', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <ImageFieldEditor
+                        label="팝업 첨부 사진 (선택)"
+                        value={pop.image || ''}
+                        onChange={(img) => {
+                          const list = [...editingModal.data];
+                          list[idx] = { ...list[idx], image: img };
+                          setEditingModal(prev => ({ ...prev, data: list }));
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </ModalPopup>

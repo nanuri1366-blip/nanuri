@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, ArrowUpDown, Plus, RefreshCw, Inbox } from 'lucide-react';
+import { Search, Filter, RefreshCw, Inbox, GripVertical, Info } from 'lucide-react';
 
 export default function DataTable({
   title,
@@ -12,25 +12,30 @@ export default function DataTable({
   searchPlaceholder = '검색어를 입력하세요...',
   filterOptions = [], // [{ label: '전체', value: 'all' }, ...]
   filterKey = null,
-  sortOptions = [], // [{ label: '이름순', key: 'name', dir: 'asc' }, ...]
   onAdd = null,
   addButtonText = '신규 등록',
   onRefresh = null,
   isRefreshing = false,
   extraHeaderActions = null,
   keyField = 'id',
-  onRowClick = null
+  onRowClick = null,
+  onReorderRows = null // (reorderedList) => void for drag & drop
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState(filterOptions[0]?.value || 'all');
-  const [selectedSort, setSelectedSort] = useState(sortOptions[0]?.key || (columns[0]?.key || ''));
-  const [sortDir, setSortDir] = useState(sortOptions[0]?.dir || 'asc');
+  const [selectedSort, setSelectedSort] = useState(''); // '' means default / 설정순
+  const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
-  // Filtering & Searching & Sorting logic
+  // 1. Is in Default / 설정순 state?
+  const isDefaultOrder = !selectedSort && !searchQuery.trim() && (!filterKey || selectedFilter === 'all');
+
+  // 2. Filtering & Searching & Sorting pipeline
   const filteredData = useMemo(() => {
     let result = [...data];
 
-    // 1. Filter
+    // Priority 1: Category Filter
     if (filterKey && selectedFilter && selectedFilter !== 'all') {
       result = result.filter(item => {
         const val = item[filterKey];
@@ -38,7 +43,7 @@ export default function DataTable({
       });
     }
 
-    // 2. Search
+    // Priority 2: Search Query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(item => {
@@ -51,19 +56,43 @@ export default function DataTable({
       });
     }
 
-    // 3. Sort
+    // Priority 3: Sort by column (only when selectedSort is active)
     if (selectedSort && selectedSort !== '_order' && selectedSort !== 'default') {
       result.sort((a, b) => {
         let valA = a[selectedSort];
         let valB = b[selectedSort];
 
+        // If sorting by total_price and total_price is missing, calculate
+        if (selectedSort === 'total_price') {
+          const numA = (a.total_price !== undefined && a.total_price !== null) 
+            ? Number(a.total_price) 
+            : (Number(a.unit_price || 0) * Number(a.quantity || 1));
+          const numB = (b.total_price !== undefined && b.total_price !== null) 
+            ? Number(b.total_price) 
+            : (Number(b.unit_price || 0) * Number(b.quantity || 1));
+          return sortDir === 'asc' ? numA - numB : numB - numA;
+        }
+
         if (valA === undefined || valA === null) valA = '';
         if (valB === undefined || valB === null) valB = '';
 
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return sortDir === 'asc' ? valA - valB : valB - valA;
+        // Numeric compare
+        const isNumA = typeof valA === 'number' || (!isNaN(Number(valA)) && valA !== '');
+        const isNumB = typeof valB === 'number' || (!isNaN(Number(valB)) && valB !== '');
+        if (isNumA && isNumB && selectedSort !== 'phone') {
+          const nA = Number(valA);
+          const nB = Number(valB);
+          return sortDir === 'asc' ? nA - nB : nB - nA;
         }
 
+        // Date compare
+        if (selectedSort.includes('date') || selectedSort.includes('_at')) {
+          const dateA = new Date(valA).getTime() || 0;
+          const dateB = new Date(valB).getTime() || 0;
+          return sortDir === 'asc' ? dateA - dateB : dateB - dateA;
+        }
+
+        // Korean/String locale compare
         const comp = String(valA).localeCompare(String(valB), 'ko-KR', { numeric: true });
         return sortDir === 'asc' ? comp : -comp;
       });
@@ -72,13 +101,59 @@ export default function DataTable({
     return result;
   }, [data, filterKey, selectedFilter, searchQuery, searchKeys, selectedSort, sortDir]);
 
+  // 3-Step Sort Toggle: asc -> desc -> default (reset)
   const handleSortToggle = (key) => {
     if (selectedSort === key) {
-      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+      if (sortDir === 'asc') {
+        setSortDir('desc');
+      } else {
+        // Return to default (설정순)
+        setSelectedSort('');
+        setSortDir('asc');
+      }
     } else {
       setSelectedSort(key);
       setSortDir('asc');
     }
+  };
+
+  // Drag & Drop Handlers
+  const handleDragStart = (e, index) => {
+    if (!isDefaultOrder || !onReorderRows) return;
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e, index) => {
+    if (!isDefaultOrder || !onReorderRows) return;
+    e.preventDefault();
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e, targetIndex) => {
+    if (!isDefaultOrder || !onReorderRows) return;
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const reordered = [...filteredData];
+    const [draggedItem] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, draggedItem);
+
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    onReorderRows(reordered);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   return (
@@ -118,6 +193,28 @@ export default function DataTable({
             }}>
               총 {filteredData.length}건
             </span>
+            {selectedSort && (
+              <span style={{
+                backgroundColor: '#E8F5E9',
+                color: '#2D6A4F',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: '700',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                정렬: {columns.find(c => c.key === selectedSort)?.label || selectedSort} ({sortDir === 'asc' ? '오름차순' : '내림차순'})
+                <button
+                  onClick={() => { setSelectedSort(''); setSortDir('asc'); }}
+                  style={{ background: 'none', border: 'none', color: '#2D6A4F', cursor: 'pointer', padding: 0, fontWeight: '800', marginLeft: '2px' }}
+                  title="기본 설정순으로 초기화"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
           </div>
           {subtitle && (
             <p style={{ fontSize: '13px', color: '#6B6862', margin: '4px 0 0 0' }}>
@@ -189,9 +286,9 @@ export default function DataTable({
         </div>
       </div>
 
-      {/* 2. Search & Filter Bar */}
+      {/* 2. Search & Filter Bar (No sort dropdown - sorting is via column headers) */}
       <div style={{
-        padding: '14px 24px',
+        padding: '12px 24px',
         backgroundColor: '#FAF9F6',
         borderBottom: '1px solid #EAE8E3',
         display: 'flex',
@@ -204,8 +301,8 @@ export default function DataTable({
         <div style={{
           position: 'relative',
           flexGrow: 1,
-          maxWidth: '400px',
-          minWidth: '240px'
+          maxWidth: '380px',
+          minWidth: '220px'
         }}>
           <Search size={16} style={{
             position: 'absolute',
@@ -222,7 +319,7 @@ export default function DataTable({
             placeholder={searchPlaceholder}
             style={{
               width: '100%',
-              padding: '9px 12px 9px 36px',
+              padding: '8px 12px 8px 36px',
               fontSize: '13px',
               borderRadius: '8px',
               border: '1px solid #EAE8E3',
@@ -236,7 +333,7 @@ export default function DataTable({
           />
         </div>
 
-        {/* Filters and Sorters */}
+        {/* Right side: Filter & Sort instructions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {/* Category Filter */}
           {filterOptions.length > 0 && (
@@ -246,7 +343,7 @@ export default function DataTable({
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
                 style={{
-                  padding: '8px 12px',
+                  padding: '7px 10px',
                   fontSize: '13px',
                   fontWeight: '600',
                   borderRadius: '8px',
@@ -264,35 +361,25 @@ export default function DataTable({
             </div>
           )}
 
-          {/* Sort Selector */}
-          {sortOptions.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ArrowUpDown size={14} style={{ color: '#6B6862' }} />
-              <select
-                value={`${selectedSort}_${sortDir}`}
-                onChange={(e) => {
-                  const [key, dir] = e.target.value.split('_');
-                  setSelectedSort(key);
-                  setSortDir(dir);
-                }}
-                style={{
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  borderRadius: '8px',
-                  border: '1px solid #EAE8E3',
-                  backgroundColor: '#FFFFFF',
-                  color: '#2B2A27',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                {sortOptions.map(opt => (
-                  <option key={`${opt.key}_${opt.dir}`} value={`${opt.key}_${opt.dir}`}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+          {/* Reordering helper hint */}
+          {onReorderRows && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '12px',
+              color: isDefaultOrder ? '#2D6A4F' : '#A09E9B',
+              backgroundColor: isDefaultOrder ? '#E8F5E9' : '#F5F4F0',
+              padding: '5px 10px',
+              borderRadius: '6px',
+              fontWeight: '600'
+            }}>
+              <Info size={13} />
+              <span>
+                {isDefaultOrder 
+                  ? '행 좌측 핸들(:::)을 끌어서 순서를 변경할 수 있습니다.' 
+                  : '설정순 정렬 상태에서만 순서 변경이 활성화됩니다.'}
+              </span>
             </div>
           )}
         </div>
@@ -309,46 +396,69 @@ export default function DataTable({
           <thead>
             <tr style={{
               backgroundColor: '#FAF6EE',
-              borderBottom: '1px solid #EAE8E3',
+              borderBottom: '1.5px solid #EAE8E3',
               color: '#6B6862',
               fontSize: '12px',
               fontWeight: '700',
               letterSpacing: '0.5px'
             }}>
-              {columns.map(col => (
-                <th
-                  key={col.key}
-                  onClick={() => col.sortable && handleSortToggle(col.key)}
-                  style={{
-                    padding: '14px 18px',
-                    width: col.width || 'auto',
-                    textAlign: col.align || 'left',
-                    cursor: col.sortable ? 'pointer' : 'default',
-                    userSelect: 'none',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    justifyContent: col.align === 'center' ? 'center' : col.align === 'right' ? 'flex-end' : 'flex-start'
-                  }}>
-                    <span>{col.label}</span>
-                    {col.sortable && selectedSort === col.key && (
-                      <span style={{ fontSize: '10px', color: '#FFAA00' }}>
-                        {sortDir === 'asc' ? '▲' : '▼'}
-                      </span>
-                    )}
-                  </div>
+              {/* Drag handle column header if reorderable */}
+              {onReorderRows && (
+                <th style={{ width: '48px', textAlign: 'center', padding: '14px 8px' }}>
+                  <span style={{ fontSize: '11px', color: '#A09E9B' }}>순서</span>
                 </th>
-              ))}
+              )}
+
+              {columns.map(col => {
+                const isSortable = col.sortable !== false && col.key !== 'actions' && col.key !== '_order_move' && col.key !== '_order_drag';
+                const isSorted = selectedSort === col.key;
+
+                return (
+                  <th
+                    key={col.key}
+                    onClick={() => isSortable && handleSortToggle(col.key)}
+                    style={{
+                      padding: '14px 18px',
+                      width: col.width || 'auto',
+                      textAlign: col.align || 'left',
+                      cursor: isSortable ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      whiteSpace: 'nowrap',
+                      transition: 'background-color 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => { if (isSortable) e.currentTarget.style.backgroundColor = '#F5EFE0'; }}
+                    onMouseLeave={(e) => { if (isSortable) e.currentTarget.style.backgroundColor = '#FAF6EE'; }}
+                    title={isSortable ? "클릭 시 [오름차순 → 내림차순 → 기본순] 정렬" : undefined}
+                  >
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      justifyContent: col.align === 'center' ? 'center' : col.align === 'right' ? 'flex-end' : 'flex-start',
+                      width: '100%'
+                    }}>
+                      <span>{col.label}</span>
+                      {isSortable && (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          fontSize: '11px',
+                          color: isSorted ? '#2D6A4F' : '#B4A078',
+                          fontWeight: isSorted ? '900' : 'normal'
+                        }}>
+                          {isSorted ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} style={{ padding: '60px 20px', textAlign: 'center' }}>
+                <td colSpan={columns.length + (onReorderRows ? 1 : 0)} style={{ padding: '60px 20px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#A09E9B' }}>
                     <Inbox size={42} style={{ strokeWidth: 1.5 }} />
                     <p style={{ fontSize: '15px', fontWeight: '600', color: '#6B6862', margin: 0 }}>
@@ -361,38 +471,74 @@ export default function DataTable({
                 </td>
               </tr>
             ) : (
-              filteredData.map((row, idx) => (
-                <tr
-                  key={row[keyField] || idx}
-                  onClick={() => onRowClick && onRowClick(row)}
-                  style={{
-                    borderBottom: '1px solid #F0EEE9',
-                    backgroundColor: idx % 2 === 1 ? '#FAFAF8' : '#FFFFFF',
-                    cursor: onRowClick ? 'pointer' : 'default',
-                    transition: 'background-color 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFDF5';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = idx % 2 === 1 ? '#FAFAF8' : '#FFFFFF';
-                  }}
-                >
-                  {columns.map(col => (
-                    <td
-                      key={col.key}
-                      style={{
-                        padding: '14px 18px',
-                        textAlign: col.align || 'left',
-                        verticalAlign: 'middle',
-                        color: '#2B2A27'
-                      }}
-                    >
-                      {col.render ? col.render(row[col.key], row, idx) : (row[col.key] !== undefined ? String(row[col.key]) : '-')}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              filteredData.map((row, idx) => {
+                const isDraggingThis = draggedIndex === idx;
+                const isDragOverThis = dragOverIndex === idx;
+
+                return (
+                  <tr
+                    key={row[keyField] || idx}
+                    draggable={Boolean(isDefaultOrder && onReorderRows)}
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDrop={(e) => handleDrop(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    onClick={() => onRowClick && onRowClick(row)}
+                    style={{
+                      borderBottom: '1px solid #F0EEE9',
+                      backgroundColor: isDragOverThis 
+                        ? '#EDF7ED' 
+                        : isDraggingThis 
+                          ? '#F9F8F6' 
+                          : idx % 2 === 1 ? '#FAFAF8' : '#FFFFFF',
+                      opacity: isDraggingThis ? 0.45 : 1,
+                      cursor: onRowClick ? 'pointer' : 'default',
+                      transition: 'background-color 0.15s ease',
+                      outline: isDragOverThis ? '2px dashed #2D6A4F' : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isDragOverThis && !isDraggingThis) {
+                        e.currentTarget.style.backgroundColor = '#FFFDF5';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isDragOverThis && !isDraggingThis) {
+                        e.currentTarget.style.backgroundColor = idx % 2 === 1 ? '#FAFAF8' : '#FFFFFF';
+                      }
+                    }}
+                  >
+                    {/* Drag Handle cell */}
+                    {onReorderRows && (
+                      <td 
+                        style={{
+                          textAlign: 'center',
+                          padding: '14px 6px',
+                          cursor: isDefaultOrder ? 'grab' : 'not-allowed',
+                          color: isDefaultOrder ? '#6B6862' : '#D0CFCB',
+                          userSelect: 'none'
+                        }}
+                        title={isDefaultOrder ? "끌어서 순서 변경" : "설정순 정렬 상태에서만 순서 변경 가능"}
+                      >
+                        <GripVertical size={16} style={{ display: 'inline-block', verticalAlign: 'middle' }} />
+                      </td>
+                    )}
+
+                    {columns.map(col => (
+                      <td
+                        key={col.key}
+                        style={{
+                          padding: '14px 18px',
+                          textAlign: col.align || 'left',
+                          verticalAlign: 'middle',
+                          color: '#2B2A27'
+                        }}
+                      >
+                        {col.render ? col.render(row[col.key], row, idx) : (row[col.key] !== undefined ? String(row[col.key]) : '-')}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

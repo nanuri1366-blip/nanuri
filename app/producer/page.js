@@ -89,14 +89,26 @@ export default function ProducerPage() {
   }, []);
 
   // Auth Handler
-  const handleAuthSubmit = (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    if (gatePassword === 'maker1234') {
-      sessionStorage.setItem('yuzu_producer_auth', 'true');
-      setIsAuthenticated(true);
-      setShowGateError(false);
-    } else {
-      setShowGateError(true);
+    try {
+      const passwords = await supabase.getAuthPasswords();
+      const validPw = passwords?.producer || 'maker1234';
+      if (gatePassword === validPw) {
+        sessionStorage.setItem('yuzu_producer_auth', 'true');
+        setIsAuthenticated(true);
+        setShowGateError(false);
+      } else {
+        setShowGateError(true);
+      }
+    } catch (err) {
+      if (gatePassword === 'maker1234') {
+        sessionStorage.setItem('yuzu_producer_auth', 'true');
+        setIsAuthenticated(true);
+        setShowGateError(false);
+      } else {
+        setShowGateError(true);
+      }
     }
   };
 

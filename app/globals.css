@@ -107,6 +107,18 @@ img {
     font-weight: 700;
     line-height: 1.35;
     color: var(--text-dark);
+    white-space: pre-line;
+    word-break: keep-all;
+}
+
+h1, h2, h3, h4, .hero-title, .hero-subtitle, .cta-title {
+    white-space: pre-line;
+    word-break: keep-all;
+}
+
+p, .product-desc, .review-text, .footer-desc {
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .title-underline {

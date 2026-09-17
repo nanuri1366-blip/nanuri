@@ -449,21 +449,27 @@ export const supabase = {
   },
 
   // ----------------------------------------------------------------------------
-  // 6. Landing Settings (기존 랜딩 호환)
+  // 6. Landing Settings (동적 섹션 및 하위 호환)
   // ----------------------------------------------------------------------------
   async getLandingSettings() {
+    let settings = null;
     try {
-      if (!supabaseUrl || !supabaseKey) throw new Error('No Supabase credentials');
-      const res = await fetch(`${supabaseUrl}/rest/v1/recipes?product_id=eq.landing_settings&select=*`, { headers });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.length > 0) {
-        return typeof data[0].materials === 'string' ? JSON.parse(data[0].materials) : data[0].materials;
+      if (supabaseUrl && supabaseKey) {
+        const res = await fetch(`${supabaseUrl}/rest/v1/recipes?product_id=eq.landing_settings&select=*`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            settings = typeof data[0].materials === 'string' ? JSON.parse(data[0].materials) : data[0].materials;
+          }
+        }
       }
     } catch (e) {
-      // ignore
+      console.warn('Supabase getLandingSettings failed, using local store', e);
     }
-    return getLocalItem('yuzu_landing_settings', null);
+    if (!settings) {
+      settings = getLocalItem('yuzu_landing_settings', null);
+    }
+    return settings;
   },
 
   async updateLandingSettings(settings) {
@@ -492,7 +498,54 @@ export const supabase = {
   },
 
   // ----------------------------------------------------------------------------
-  // 7. Backward Compatibility: getInventory (Landing page용)
+  // 7. Auth Passwords (관리자 & 생산자 비밀번호)
+  // ----------------------------------------------------------------------------
+  async getAuthPasswords() {
+    const defaultPasswords = { admin: 'yuzu1234', producer: 'maker1234' };
+    try {
+      if (supabaseUrl && supabaseKey) {
+        const res = await fetch(`${supabaseUrl}/rest/v1/recipes?product_id=eq.auth_passwords&select=*`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            const parsed = typeof data[0].materials === 'string' ? JSON.parse(data[0].materials) : data[0].materials;
+            if (parsed && (parsed.admin || parsed.producer)) {
+              setLocalItem('yuzu_auth_passwords', parsed);
+              return { ...defaultPasswords, ...parsed };
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase getAuthPasswords failed, using local store', e);
+    }
+    return getLocalItem('yuzu_auth_passwords', defaultPasswords);
+  },
+
+  async updateAuthPasswords(passwords) {
+    const updated = {
+      admin: passwords.admin || 'yuzu1234',
+      producer: passwords.producer || 'maker1234',
+      updated_at: new Date().toISOString()
+    };
+    setLocalItem('yuzu_auth_passwords', updated);
+
+    try {
+      if (!supabaseUrl || !supabaseKey) return true;
+      const res = await fetch(`${supabaseUrl}/rest/v1/recipes?product_id=eq.auth_passwords`, {
+        method: 'POST',
+        headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ product_id: 'auth_passwords', materials: updated })
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn('Supabase updateAuthPasswords error', e);
+      return true;
+    }
+  },
+
+  // ----------------------------------------------------------------------------
+  // 8. Backward Compatibility: getInventory (Landing page용)
   // ----------------------------------------------------------------------------
   async getInventory() {
     // 랜딩페이지에서 호출하는 deundeun, silsok, mini, natgae 재고 매핑
