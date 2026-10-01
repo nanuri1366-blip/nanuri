@@ -201,8 +201,10 @@ export default function AdminDashboard() {
 
   // 3.1 Password Management State
   const [authPasswords, setAuthPasswords] = useState({ admin: 'yuzu1234', producer: 'maker1234' });
+  const [adminCurrentPw, setAdminCurrentPw] = useState('');
   const [adminNewPw, setAdminNewPw] = useState('');
   const [adminConfirmPw, setAdminConfirmPw] = useState('');
+  const [producerCurrentPw, setProducerCurrentPw] = useState('');
   const [producerNewPw, setProducerNewPw] = useState('');
   const [producerConfirmPw, setProducerConfirmPw] = useState('');
   const [pwSaveSuccess, setPwSaveSuccess] = useState('');
@@ -331,30 +333,69 @@ export default function AdminDashboard() {
     setPwSaveSuccess('');
     setPwSaveError('');
 
-    let updatedAdmin = authPasswords.admin;
-    let updatedProducer = authPasswords.producer;
+    let latestPasswords = { ...authPasswords };
+    try {
+      const dbPw = await supabase.getAuthPasswords();
+      if (dbPw) {
+        latestPasswords = { ...latestPasswords, ...dbPw };
+        setAuthPasswords(latestPasswords);
+      }
+    } catch (e) {
+      console.warn('최신 비밀번호 확인 실패, 로컬 상태 참조', e);
+    }
+
+    let updatedAdmin = latestPasswords.admin || 'yuzu1234';
+    let updatedProducer = latestPasswords.producer || 'maker1234';
     let changed = false;
 
-    if (adminNewPw) {
+    // 관리자 비밀번호 변경 검사
+    const isAdminAttempted = Boolean(adminCurrentPw || adminNewPw || adminConfirmPw);
+    if (isAdminAttempted) {
+      if (!adminCurrentPw) {
+        setPwSaveError('기존 관리자 비밀번호를 입력해주세요.');
+        return;
+      }
+      if (adminCurrentPw !== updatedAdmin) {
+        setPwSaveError('기존 관리자 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      if (!adminNewPw) {
+        setPwSaveError('새 관리자 비밀번호를 입력해주세요.');
+        return;
+      }
       if (adminNewPw.length < 4) {
-        setPwSaveError('관리자 새 비밀번호는 최소 4자 이상이어야 합니다.');
+        setPwSaveError('새 관리자 비밀번호는 최소 4자 이상이어야 합니다.');
         return;
       }
       if (adminNewPw !== adminConfirmPw) {
-        setPwSaveError('관리자 새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
+        setPwSaveError('새 관리자 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
         return;
       }
       updatedAdmin = adminNewPw;
       changed = true;
     }
 
-    if (producerNewPw) {
+    // 생산자 비밀번호 변경 검사
+    const isProducerAttempted = Boolean(producerCurrentPw || producerNewPw || producerConfirmPw);
+    if (isProducerAttempted) {
+      if (!producerCurrentPw) {
+        setPwSaveError('기존 생산자 비밀번호를 입력해주세요.');
+        return;
+      }
+      if (producerCurrentPw !== updatedProducer) {
+        setPwSaveError('기존 생산자 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      if (!producerNewPw) {
+        setPwSaveError('새 생산자 비밀번호를 입력해주세요.');
+        return;
+      }
       if (producerNewPw.length < 4) {
-        setPwSaveError('생산자 새 비밀번호는 최소 4자 이상이어야 합니다.');
+        setPwSaveError('새 생산자 비밀번호는 최소 4자 이상이어야 합니다.');
         return;
       }
       if (producerNewPw !== producerConfirmPw) {
-        setPwSaveError('생산자 새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
+        setPwSaveError('새 생산자 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
         return;
       }
       updatedProducer = producerNewPw;
@@ -362,7 +403,7 @@ export default function AdminDashboard() {
     }
 
     if (!changed) {
-      setPwSaveError('변경할 새 비밀번호를 입력해주세요.');
+      setPwSaveError('변경할 비밀번호 정보를 입력해주세요.');
       return;
     }
 
@@ -370,8 +411,10 @@ export default function AdminDashboard() {
     const success = await supabase.updateAuthPasswords(newObj);
     if (success) {
       setAuthPasswords(newObj);
+      setAdminCurrentPw('');
       setAdminNewPw('');
       setAdminConfirmPw('');
+      setProducerCurrentPw('');
       setProducerNewPw('');
       setProducerConfirmPw('');
       setPwSaveSuccess('비밀번호가 안전하게 변경되었습니다.');
@@ -1163,7 +1206,7 @@ export default function AdminDashboard() {
               type="password" 
               value={gatePassword}
               onChange={(e) => setGatePassword(e.target.value)}
-              placeholder="관리자 암호 (기본값: yuzu1234)" 
+              placeholder="관리자 암호를 입력하세요" 
               autoFocus
               style={{
                 width: '100%',
@@ -3506,10 +3549,29 @@ export default function AdminDashboard() {
                     <strong style={{ fontSize: '16px', color: '#2B2A27' }}>관리자 페이지 비밀번호</strong>
                   </div>
                   <p style={{ fontSize: '12px', color: '#6B6862', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-                    현재 대시보드 및 전체 설정을 수정할 수 있는 최고 권한 암호입니다. (초기값: <code>yuzu1234</code>)
+                    현재 대시보드 및 전체 설정을 수정할 수 있는 최고 권한 암호입니다.
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#4A4844', marginBottom: '4px' }}>
+                        기존 관리자 비밀번호
+                      </label>
+                      <input
+                        type="password"
+                        value={adminCurrentPw}
+                        onChange={(e) => setAdminCurrentPw(e.target.value)}
+                        placeholder="기존 비밀번호 입력"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #D6D3CC',
+                          fontSize: '14px',
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      />
+                    </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#4A4844', marginBottom: '4px' }}>
                         새 관리자 비밀번호
@@ -3563,10 +3625,29 @@ export default function AdminDashboard() {
                     <strong style={{ fontSize: '16px', color: '#2B2A27' }}>생산자(작업자) 페이지 비밀번호</strong>
                   </div>
                   <p style={{ fontSize: '12px', color: '#6B6862', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-                    현장 제조/포장 담당자가 재고와 주문 상태를 확인하는 전용 암호입니다. (초기값: <code>maker1234</code>)
+                    현장 제조/포장 담당자가 재고와 주문 상태를 확인하는 전용 암호입니다.
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#4A4844', marginBottom: '4px' }}>
+                        기존 생산자 비밀번호
+                      </label>
+                      <input
+                        type="password"
+                        value={producerCurrentPw}
+                        onChange={(e) => setProducerCurrentPw(e.target.value)}
+                        placeholder="기존 비밀번호 입력"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #D6D3CC',
+                          fontSize: '14px',
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      />
+                    </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#4A4844', marginBottom: '4px' }}>
                         새 생산자 비밀번호

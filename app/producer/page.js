@@ -365,7 +365,7 @@ export default function ProducerPage() {
               type="password"
               value={gatePassword}
               onChange={(e) => setGatePassword(e.target.value)}
-              placeholder="작업자 암호 (기본값: maker1234)"
+              placeholder="작업자 암호를 입력하세요"
               autoFocus
               style={{
                 width: '100%',
